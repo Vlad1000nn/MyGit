@@ -1,5 +1,5 @@
 julia
 using HorizonSideRobots
-include("2.jl")
+include("22.jl")
 r=Robot(animate=true)
-main!(r)
+main!(r,Ost)

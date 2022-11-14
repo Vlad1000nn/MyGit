@@ -1,6 +1,6 @@
 julia
 using HorizonSideRobots
-include("6.jl")
+include("test.jl")
 
 mutable struct Coordinates
     x::Int

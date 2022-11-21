@@ -1,79 +1,58 @@
-function perimetr!(robot)     #Ставим маркеры по периметру
-    
-    for side in(Nord,Ost,Sud,West)
+using HorizonSideRobots
 
-        while (!isborder(robot,side))
-            move!(robot,side)
-            putmarker!(robot)
+global check = 0
+
+mutable struct Coordinates
+    x::Int64
+    y::Int64
+end
+
+struct CoordRobot
+    robot::Robot
+    cords::Coordinates
+end
+
+function move_cords!(cords::Coordinates, side)
+    if side == Ost
+        cords.x += 1
+    elseif side == West
+        cords.x -= 1
+    elseif side == Nord
+        cords.y += 1
+    elseif side == Sud
+        cords.y -= 1
+    end
+    return cords
+end
+
+function try_move_putmarker_staggerd!(robot::CoordRobot, side)
+    move!(robot.robot, side)
+    move_cords!(robot.cords, side)
+    if !ismarker(robot.robot)
+        if check % 2 == 0
+        putmarker!(robot.robot)
         end
-
     end
-
+    global check += 1
 end
 
-function perimetr2!(robot)     #Ставим маркеры по координатам
-    
-    for side in(Nord,Ost,Sud,West)
-        while (!isborder(robot,side))
-            move!(robot,side)
-            x,y=get_coord(robot)
-            check!(robot,abs(x),abs(y))
+
+function get_cords(cords::Coordinates)
+    return cords
+end
+
+function solve!(previous_arr::Array, current_arr::Array, robot::CoordRobot)
+    previous_arr[robot.cords.x, robot.cords.y] = true
+    for i in 0:3
+        side = HorizonSide(i)
+        if isborder(robot.robot, side)
+            current_arr[robot.cords.x, robot.cords.y] = true
+        elseif !previous_arr[robot.cords.x + move_cords!(Coordinates(0, 0), side).x, robot.cords.y + move_cords!(Coordinates(0, 0), side).y]
+            try_move_putmarker_staggerd!(robot, side)
+            solve!(previous_arr, current_arr, robot)
+            try_move_putmarker_staggerd!(robot, inverse(side))
         end
-
-    end
-
-end
-
-function check!(robot,x,y)          #Проверяем координаты
-    if (x==0 || y==0)
-        putmarker!(robot)
     end
 end
 
-function numsteps_along!(robot,side)::Int64
-num_steps=0
-while (!isborder(robot,side))
-    move!(robot,side)
-    num_steps+=1
-end
-return num_steps
-end
-
-
-function move_to_angle!(robot, angle=(Sud,West))            #Идём в угол
-    back_path = NamedTuple{(:side,:num_steps),Tuple{HorizonSide, Int}}[]
-    while !isborder(robot,angle[1]) || !isborder(robot, angle[2])
-        push!( back_path, ( side = inverse(angle[1]), num_steps = numsteps_along!(robot, angle[1]) ) )
-        push!(back_path, (side = inverse(angle[2]), num_steps = numsteps_along!(robot, angle[2])))  
-    end
-    return back_path
-end
-
-function HorizonSideRobots.move!(robot::CoordRobot, back_path::Vector{NamedTuple{(:side,:num_steps),Tuple{HorizonSide, Int}}})  #Домой
-    back_path=reverse!(back_path)
-    for next in back_path
-        along!(robot, next.side, next.num_steps)
-    end
-end
-
-function along!(robot,side,num_steps)
-    for _i in 1:num_steps
-        move!(robot,side)
-    end
-end
-
-
-function main1!(robot)
-back_path=move_to_angle!(robot)
-perimetr!(robot)
-HorizonSideRobots.move!(robot,back_path)
-end
-
-function main2!(robot)
-back_path=move_to_angle!(robot)
-perimetr2!(robot)
-HorizonSideRobots.move!(robot,back_path)
-end
-
-
-inverse(side::HorizonSide)::HorizonSide = HorizonSide(mod(Int(side)+2, 4))
+inverse(side::HorizonSide) = HorizonSide((Int(side) +2)% 4)

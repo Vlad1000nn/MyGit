@@ -1,58 +1,65 @@
-using HorizonSideRobots
-
-global check = 0
-
-mutable struct Coordinates
-    x::Int64
-    y::Int64
+function  shuttle!(stop_condition::Function, robot, side)       #Челнок обход стены
+    n=0 
+    start_side=side
+while !stop_condition() 
+ n += 1
+ along_shuttle!(robot, right(side), n,()->!isborder(robot,start_side))
+ side = inverse(side)
+ if (stop_condition())
+    break
+ end
+ along_shuttle!(robot,right(side),2n,()->!isborder(robot,start_side))
+ side=inverse(side)
+ if (stop_condition())
+    break
+ end
+ along_shuttle!(robot,right(side),n,()->!isborder(robot,start_side))
 end
-
-struct CoordRobot
-    robot::Robot
-    cords::Coordinates
-end
-
-function move_cords!(cords::Coordinates, side)
-    if side == Ost
-        cords.x += 1
-    elseif side == West
-        cords.x -= 1
-    elseif side == Nord
-        cords.y += 1
-    elseif side == Sud
-        cords.y -= 1
-    end
-    return cords
-end
-
-function try_move_putmarker_staggerd!(robot::CoordRobot, side)
-    move!(robot.robot, side)
-    move_cords!(robot.cords, side)
-    if !ismarker(robot.robot)
-        if check % 2 == 0
-        putmarker!(robot.robot)
-        end
-    end
-    global check += 1
-end
-
-
-function get_cords(cords::Coordinates)
-    return cords
-end
-
-function solve!(previous_arr::Array, current_arr::Array, robot::CoordRobot)
-    previous_arr[robot.cords.x, robot.cords.y] = true
-    for i in 0:3
-        side = HorizonSide(i)
-        if isborder(robot.robot, side)
-            current_arr[robot.cords.x, robot.cords.y] = true
-        elseif !previous_arr[robot.cords.x + move_cords!(Coordinates(0, 0), side).x, robot.cords.y + move_cords!(Coordinates(0, 0), side).y]
-            try_move_putmarker_staggerd!(robot, side)
-            solve!(previous_arr, current_arr, robot)
-            try_move_putmarker_staggerd!(robot, inverse(side))
-        end
+if (n!=0)
+    move!(robot,start_side)
+    for _i in 1:n
+        move!(robot,(right(side)))
     end
 end
+if (n==0)
+    move!(robot,start_side)
+end
+end
 
-inverse(side::HorizonSide) = HorizonSide((Int(side) +2)% 4)
+function  along_shuttle!(robot, side, n,stop_condition::Function)        
+for _i in 1:n
+    if (!stop_condition())
+    move!(robot,side)
+    end
+end
+end
+
+
+function spiral!(stop_condition::Function, robot)           #Спираль
+n=0
+side=Nord
+while !stop_condition()
+    n+=1
+    for _i in 1:2
+    along!(robot,side,n,stop_condition)
+    side=left(side)
+    end
+end
+end
+
+function along!(robot,side,n,stop_condition::Function)
+for _i in 1:n
+    if !stop_condition()
+    shuttle!(()->!isborder(robot,side),robot,side)
+    end
+end
+end
+
+
+function main!(robot)
+spiral!(()->ismarker(robot),robot)
+end
+
+right(side::HorizonSide)::HorizonSide = HorizonSide(mod(Int(side)+1, 4))
+left(side::HorizonSide)::HorizonSide = HorizonSide(mod(Int(side)-1, 4))
+inverse(side::HorizonSide)::HorizonSide = HorizonSide(mod(Int(side)+2, 4))

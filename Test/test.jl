@@ -1,65 +1,28 @@
-function  shuttle!(stop_condition::Function, robot, side)       #Челнок обход стены
-    n=0 
-    start_side=side
-while !stop_condition() 
- n += 1
- along_shuttle!(robot, right(side), n,()->!isborder(robot,start_side))
- side = inverse(side)
- if (stop_condition())
-    break
- end
- along_shuttle!(robot,right(side),2n,()->!isborder(robot,start_side))
- side=inverse(side)
- if (stop_condition())
-    break
- end
- along_shuttle!(robot,right(side),n,()->!isborder(robot,start_side))
+function fibonacci(a::Array,n)
+   if (n==0 || n==1)
+    return 1
+   end
+   for i in 3:n
+    a[i]=a[i-1]+a[i-2]
+   end
+   return a[n]
 end
-if (n!=0)
-    move!(robot,start_side)
-    for _i in 1:n
-        move!(robot,(right(side)))
+
+function fibonacci_recursion(n::Integer)
+    if (n==1 || n==2)
+        return 1
     end
-end
-if (n==0)
-    move!(robot,start_side)
-end
-end
-
-function  along_shuttle!(robot, side, n,stop_condition::Function)        
-for _i in 1:n
-    if (!stop_condition())
-    move!(robot,side)
-    end
-end
+    return fibonacci_recursion(n-1) + fibonacci_recursion(n-2)
 end
 
 
-function spiral!(stop_condition::Function, robot)           #Спираль
-n=0
-side=Nord
-while !stop_condition()
-    n+=1
-    for _i in 1:2
-    along!(robot,side,n,stop_condition)
-    side=left(side)
-    end
-end
+
+function main1(n::Int)
+a=Array{Int}(undef,n+1)
+a[1]=a[2]=1
+fibonacci(a,n)
 end
 
-function along!(robot,side,n,stop_condition::Function)
-for _i in 1:n
-    if !stop_condition()
-    shuttle!(()->!isborder(robot,side),robot,side)
-    end
+function main2(n::Int)
+    fibonacci_recursion(n)
 end
-end
-
-
-function main!(robot)
-spiral!(()->ismarker(robot),robot)
-end
-
-right(side::HorizonSide)::HorizonSide = HorizonSide(mod(Int(side)+1, 4))
-left(side::HorizonSide)::HorizonSide = HorizonSide(mod(Int(side)-1, 4))
-inverse(side::HorizonSide)::HorizonSide = HorizonSide(mod(Int(side)+2, 4))

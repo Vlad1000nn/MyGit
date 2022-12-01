@@ -60,7 +60,7 @@ function go_to_home!(robot,num_steps_Sud,num_steps_West)        #Домой
     end
 end
 
-function check!(robot)
+function check!(robot)          #Проверка координат
     x,y=get_coord(robot)
     if ( ( ( abs(x+y) )%2 )==0 )
         putmarker!(robot)

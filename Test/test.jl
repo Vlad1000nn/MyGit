@@ -1,28 +1,30 @@
-function fibonacci(a::Array,n)
-   if (n==0 || n==1)
-    return 1
-   end
-   for i in 3:n
-    a[i]=a[i-1]+a[i-2]
-   end
-   return a[n]
-end
-
-function fibonacci_recursion(n::Integer)
-    if (n==1 || n==2)
-        return 1
+function move_recursion!(robot,side)   # рекурсивно до стены,вызов обхода и до симм. точки 
+    if (!isborder(robot,side))
+        move!(robot,side)
+        move_recursion!(robot,side)
+    else
+        wall_recursion!(robot,side)
     end
-    return fibonacci_recursion(n-1) + fibonacci_recursion(n-2)
+    move!(robot,side)
 end
 
 
+function wall_recursion!(robot,side)            #Рекурсивно обход стены
+    if (isborder(robot,side))
+        move!(robot,right(side))
+        wall_recursion!(robot,side)
+        move!(robot,inverse(right(side)))
+    else
+        move!(robot,side)
+    end
 
-function main1(n::Int)
-a=Array{Int}(undef,n+1)
-a[1]=a[2]=1
-fibonacci(a,n)
 end
 
-function main2(n::Int)
-    fibonacci_recursion(n)
+
+function main!(robot,side)
+move_recursion!(robot,side)
+move!(robot,inverse(side))
 end
+
+right(side::HorizonSide) = HorizonSide((Int(side) +3)% 4)
+inverse(side::HorizonSide) = HorizonSide((Int(side) +2)% 4)

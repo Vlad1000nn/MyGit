@@ -51,7 +51,7 @@ HorizonSideRobots.temperature(robot::CoordRobot) = temperature(robot.robot)
 
 get_coord(robot::CoordRobot) = get_coord(robot.coord)
 
-r=CoordRobot(Robot(animate=true), Coordinates(0,0))
+r=CoordRobot(Robot("6.sit",animate=true), Coordinates(0,0))
 
 main1!(r)
 main2!(r)

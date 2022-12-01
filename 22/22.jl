@@ -1,30 +1,21 @@
-function move_recursion!(robot,side)   # рекурсивно до стены,вызов обхода и до симм. точки 
+function moving_recursion!(robot,side)      #рекурсивно до стены,назад вдвойне,если не получится return false
     if (!isborder(robot,side))
-        move!(robot,side)
-        move_recursion!(robot,side)
-    else
-        wall_recursion!(robot,side)
-    end
-    move!(robot,side)
+         move!(robot, side)
+         moving_recursion!(robot, side)
+         for _i in 1:2
+             if (!isborder(robot,inverse(side)))
+                move!(robot, inverse(side))
+             else
+                 return false
+             end
+         end
+     end
+     return true
 end
 
-
-function wall_recursion!(robot,side)            #Рекурсивно обход стены
-    if (isborder(robot,side))
-        move!(robot,right(side))
-        wall_recursion!(robot,side)
-        move!(robot,inverse(right(side)))
-    else
-        move!(robot,side)
-    end
-
-end
-
-
+ 
 function main!(robot,side)
-move_recursion!(robot,side)
-move!(robot,inverse(side))
+moving_recursion!(robot,side)
 end
 
-right(side::HorizonSide) = HorizonSide((Int(side) +3)% 4)
 inverse(side::HorizonSide) = HorizonSide((Int(side) +2)% 4)

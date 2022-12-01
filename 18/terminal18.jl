@@ -1,5 +1,7 @@
 julia
 using HorizonSideRobots
 include("18.jl")
-r=Robot(animate=true)
-main!(r,Ost)
+r=Robot("18.1.sit",animate=true)
+main1!(r)
+r=Robot("18.2.sit",animate=true)
+main2!(r)

@@ -20,13 +20,19 @@ function check_next_coords!(robot,side)
     return x,y
 end
 
+function check_putmarker!(robot)
+    x,y=get_coord(robot)
+    if ( (x+y)%2==0)
+        putmarker!(robot)
+    end
+end
 
 function try_move!(robot,side,a::Array)
     x,y=check_next_coords!(robot,side)
     if ( !isborder(robot,side) )
         if (check_cell(x,y,a))
             move!(robot,side)
-            putmarker!(robot)
+            check_putmarker!(robot)
             a[x,y]=true
             return true
         else

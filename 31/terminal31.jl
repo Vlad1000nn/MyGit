@@ -1,6 +1,6 @@
 julia
 using HorizonSideRobots
-include("26.jl")
+include("31.jl")
 
 mutable struct Coordinates
     x::Int
@@ -51,5 +51,5 @@ HorizonSideRobots.temperature(robot::CoordRobot) = temperature(robot.robot)
 
 get_coord(robot::CoordRobot) = get_coord(robot.coord)
 
-r=CoordRobot(Robot("26.sit",animate=true), Coordinates(1,1))
+r=CoordRobot(Robot("31.sit",animate=true), Coordinates(10,10))
 main!(r)

@@ -37,18 +37,15 @@
 #include <string>
 #include <algorithm>
 #include <vector>
-#include <bitset>
 #include <random>
 #include <chrono>
 
 using namespace std;
 
-namespace Random
-{
+namespace Random {
 	std::mt19937 mt{ std::random_device{}() };
 
-	int get(int min, int max)
-	{
+	int get(int min, int max) {
 		std::uniform_int_distribution die{ min, max };
 		return die(mt);
 	}
@@ -57,46 +54,37 @@ namespace Random
 int Ciura[]{ 1,4,10,23,57,132,301,701,1750 };
 
 template<typename T>
-bool compare(T x, T y)
-{
+bool compare(T x, T y) {
 	return x < y;
 }
 
 template<typename T>
-void check(T* arr, int i, int g, bool(*f)(T, T))
-{
+void check(T* arr, int i, int g, bool(*f)(T, T)) {
 	if (i < 0 || g < 0) return;
-	if (f(arr[i], arr[g]))
-	{
+	if (f(arr[i], arr[g])) {
 		swap(arr[i], arr[g]);
 		check(arr, g, 2 * g - i, f);
 	}
 }
 
 template<typename T>
-void build(T* arr, int variance, int len, bool(*f)(T, T))
-{
+void build(T* arr, int variance, int len, bool(*f)(T, T)) {
 	for (int i = variance, g = 0; i < len; i++, g++)
-	{
 		check(arr, i, g, f);
-	}
 }
 
 template<size_t N, typename T>
-void MyShellSort(T(&arr)[N], bool(*f)(T, T) = compare)
-{
+void MyShellSort(T(&arr)[N], bool(*f)(T, T) = compare) {
 	int variance = 8;
 	while (Ciura[variance] > N) variance--;
 	while (variance-- > 0)
 		build(arr, variance, N, f);
 }
 
-int main()
-{
+int main() {
 	int Arr[100];
 
-	for (int i = 0; i < 100; i++)
-	{
+	for (int i = 0; i < 100; i++) {
 		Arr[i] = Random::get(1, 1000);
 		cout << Arr[i] << ' ';
 	}

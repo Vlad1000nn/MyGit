@@ -1,5 +1,5 @@
 #Алгоритм быстрого возведения в степень
-function myfastpow(a::Int64, n::Int64)
+function myfastpow(a, n)
     k=n
     p=a
     t=1

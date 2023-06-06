@@ -4,7 +4,7 @@ function resheto(n::Integer)
     prime_indexes[begin] = false
     i = 2
     prime_indexes[i^2:i:n] .= false 
-    i=3
+    i = 3
    
     while i <= n
         prime_indexes[i^2:2i:n] .= false
@@ -16,3 +16,5 @@ function resheto(n::Integer)
     end
     return findall(prime_indexes)
 end
+
+print(resheto(200))

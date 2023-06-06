@@ -1,12 +1,11 @@
 # Приведение матрицы к ступеньчатому виду
 using LinearAlgebra
 function gaussian_elimination(A)
-    n = size(A, 1)
-    # Forward elimination
+    n = size(A, 1)      # Определяем размерность матрицы A
     for k = 1:n-1
         for i = k+1:n
-            factor = A[i,k] / A[k,k]
-            A[i,k:end] -= factor * A[k,k:end]
+            factor = A[i,k] / A[k,k]             # Вычисляем множ factor
+            A[i,k:end] -= factor * A[k,k:end]    # Обнуляем элементы в столбце k ниже строки k
             
         end
     end

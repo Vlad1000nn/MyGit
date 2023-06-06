@@ -15,3 +15,5 @@ function myfastpow(a, n)
     end
     return t
 end
+
+print(myfastpow(5,14))

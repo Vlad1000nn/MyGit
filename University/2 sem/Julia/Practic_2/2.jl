@@ -7,3 +7,5 @@ function formulaBine(n)
 
     return round(a)
 end
+
+print(formulaBine(30))

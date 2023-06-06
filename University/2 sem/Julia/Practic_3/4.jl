@@ -1,10 +1,10 @@
 # Средне квадратическое отклонение
 function mean_mass(mass)
-    T = eltype(mass)
-    n = 0; s¹ = zero(T); s² = zero(T)
+    T = eltype(mass)    # определяем тип элементов массива mass
+    n = 0; s1 = zero(T); s2 = zero(T)
     for a ∈ mass
-    n += 1; s¹ .+= a; s² += a*a
+        n += 1; s1 .+= a; s2 += a*a
     end
-    mean = s¹ ./ n
-    return mean, sqrt(s²/n - mean*mean)
-    end
+    mean = s1 ./ n
+    return mean, sqrt(s2/n - mean*mean)
+end

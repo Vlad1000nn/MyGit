@@ -7,12 +7,14 @@ function quick_sort(array, low, high)
     end
 end
 
+# Обмен элементами массива
 function swap(arr, i, j)
     temp = arr[i]
     arr[i] = arr[j]
     arr[j] = temp
 end
 
+# Разбиение массива на две части
 function partition(array, low, high)
     pivot = array[high]
 

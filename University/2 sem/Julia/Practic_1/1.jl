@@ -5,3 +5,5 @@ function gcd(a,b)
     end
     return abs(a)
 end
+
+print(gcd(14,35))

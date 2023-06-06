@@ -11,3 +11,5 @@ function Diophantine_solve(a, b, c)
     
     return x, y
 end
+
+print(Diophantine_solve(14,29,3))

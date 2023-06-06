@@ -42,6 +42,7 @@ function merge(array, left, mid, right)
 
 end
 
+# Объединение массивов
 function merge_sort(array, first, last)
     if (first >= last)
         return

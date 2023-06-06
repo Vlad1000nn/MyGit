@@ -8,3 +8,5 @@ function isPrime(n)
     end
     return true
 end
+
+print(isPrime(103))

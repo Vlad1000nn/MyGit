@@ -1,3 +1,4 @@
+# Сортировка массива в порядке возрастания или убывания
 function sort_in_place(a, reverse)
     n = size(a, 1)
     if reverse
@@ -25,12 +26,13 @@ end
 
 
 
-array = rand(10)
+array = rand(10)                # Создаем массив array случайных чисел и выводим его на экран
 println(array)
-sort_in_place(array, false)
-#sort!(array)
+sort_in_place(array, false)     # Сортируем массив array в порядке возрастания и выводим его на экран
 println(array)
 
+
+# Сортировка массива в порядке возрастания или убывания и возврат массива индексов
 function sort_index(a, reverse)
     n = size(a, 1)
     arr_index = Array{Int64}(undef, n)
@@ -68,7 +70,7 @@ function sort_index(a, reverse)
 end
 
 
-arr2 = [0.297288, 0.382396, -0.597634, -0.0104452, -0.839027]
-sort_in_place(array, true)
+arr2 = [0.297288, 0.382396, -0.597634, -0.0104452, -0.839027]           # Создаем массив arr2 и выводим его на экран
+sort_in_place(array, true)                                              # Сортируем массив arr в порядке убывания и выводим его на экран
 println(arr2)
-println(sort_index(arr2, true))
+println(sort_index(arr2, true))    # Сортируем массив arr2 в порядке убывания и получаем массив индексов, соответствующих отсортированному массиву arr2         

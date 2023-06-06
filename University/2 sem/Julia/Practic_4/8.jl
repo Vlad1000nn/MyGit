@@ -11,6 +11,7 @@ function gaussian_elimination(A)
             
         end
     end
+    # Вычисляем ранг матрицы A как количество ненулевых строк
     count = 0
     for i = 1:n
         check = zeros(t, 0)

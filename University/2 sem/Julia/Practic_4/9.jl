@@ -11,7 +11,7 @@ function gaussian_elimination(A)
             
         end
     end
-    
+        # Вычисляем определитель матрицы A как произведение элементов на главной диагонали
     det = 1
     for i = 1:n
        det = det * A[i, i]

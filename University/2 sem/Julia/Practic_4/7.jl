@@ -13,8 +13,5 @@ function gaussian_elimination(A)
     return A
 end
 
-
-
-
 A = rand(Float64, (1000, 1000))
 @time gaussian_elimination(A)

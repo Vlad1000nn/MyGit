@@ -13,3 +13,5 @@ function extended_gcd(a,b)
     end
     return a, x, y
 end
+
+print(extended_gcd(14,29))

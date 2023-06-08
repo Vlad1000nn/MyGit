@@ -1,11 +1,8 @@
-#n-й член Фибоначчи по формуле Бине
-function formulaBine(n)
-    root_5 = 5 ^ 0.5
-    phi = ((1 + root_5) / 2)
-
-    a = (myfastpow(phi,n) - (myfastpow((-phi), -n)) ) / root_5
-
-    return round(a)
+#n-й член Фибоначчи возвдением матрицы в степень
+function FibMat(n)
+    m = [1 1; 1 0]
+    m = myfastpow(m,n)
+    return m[1,1]
 end
 
-print(formulaBine(30))
+print(FibMat(9))

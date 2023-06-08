@@ -1,4 +1,3 @@
-# Производительный Гаусс
 using LinearAlgebra
 function gaussian_elimination(A)
     n = size(A, 1)

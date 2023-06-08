@@ -1,15 +1,28 @@
-#Считаем log(a,b)
-function log2(n)
-    logValue = -1
-    while (n > 0)
-        logValue = logValue + 1
-        n = floor(n / 2)
+#Считаем log(a,b) с погрешностью Eps
+
+# log[1/a] x = - log[a] x
+function log(a0, x, epsilon)
+    a = a0; flag  = false
+    if a < 1.0
+        a = 1.0 / a
+        flag = true
     end
-    return logValue
+    y = 0.0; z = x; t = 1.0;
+    while abs(t) > epsilon || z < 1.0 / a || z > a
+        # инвариант a^y * z^t == x
+        if z > a
+            z /= a
+            y += t
+        elseif  z < 1.0 / a
+            z *= a
+            y -= t
+        else
+            z *= z
+            t /= 2.0
+        end
+    end
+
+    return (flag) ? -y : y
 end
 
-function log(a::Int64, b::Int64)
-    return log2(b) / log2(a)
-end
-
-print(log(3,28))
+print(log(0.2,15.67,1e-8))

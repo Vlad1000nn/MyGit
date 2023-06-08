@@ -2,8 +2,7 @@
 using LightGraphs
 
 function is_bipartite(g)
-    # Создаем массив цветов для каждой вершины графа
-    colors = fill(0, nv(g))
+    colors = fill(0, nv(g))          # Создаем массив цветов для каждой вершины графа
     
     # Функция для проверки двудольности графа
     function dfs(v, color)

@@ -1,4 +1,4 @@
-# Проверка, лежит ли точка внутри прямоугольника
+# Проверка, лежит ли точка внутри многоугольника
 function point_inside_polygon(p::Vector2D, poly::Array{Vector2D{T}, 1}) where T<:Real
     winding_number = 0
     num_vertices = length(poly)

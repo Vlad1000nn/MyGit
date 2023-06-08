@@ -1,24 +1,15 @@
 # Ранг прямоугольной матрицы
 using LinearAlgebra
-function gaussian_elimination(A)
-    n = size(A, 1)
-    t = size(A, 2)
-    println(t)
-    for k = 1:n-1
-        for i = k+1:n
-            factor = A[i,k] / A[k,k]
-            A[i,k:end] -= factor * A[k,k:end]
-            
-        end
-    end
+function rang(A)
+    gaussian_elimination!(copy(A))
+
     # Вычисляем ранг матрицы A как количество ненулевых строк
-    count = 0
-    for i = 1:n
-        check = zeros(t, 0)
-        if A[i, 1:end] != check[1, 1:end]
+    count = 0; i = 1
+       # check = zeros(t, 0)
+        while A[i, i] != 0.0
             count = count + 1
+            i += 1
         end
-    end
     return count
 end
 

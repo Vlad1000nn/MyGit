@@ -22,25 +22,6 @@ import Base: +, -, *, ^, inv, -, show
 #Операция умножения
 *(a::ModuloRingElement, b::ModuloRingElement) = ModuloRingElement(a.value * b.value, a.modulus)
 
-#Операция возведения в степень
-function ^(a::ModuloRingElement, n::Integer)
-    if n < 0
-        error("Error: negative exponent")
-    elseif n == 0
-        return ModuloRingElement(1, a.modulus)
-    elseif n == 1
-        return a
-    else
-        b = a^(div(n, 2))
-        c = b * b
-        if iseven(n)
-            return c
-        else
-            return a * c
-        end
-    end
-end
-
 #Обращает обратимые элементы
 inv(a::ModuloRingElement) = ModuloRingElement(invmod(a.value, a.modulus), a.modulus)
 

@@ -15,8 +15,8 @@ function borisenco_bisection(f::Function, a, b, epsilon)
 end
 
 function F(x)
-    return cos(x)
+    return cos(x) - x
 end
 
 
-print(borisenco_bisection(F,1,3.5,1e-8))
+print(borisenco_bisection(F,-1,3.5,1e-8))

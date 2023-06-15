@@ -1,37 +1,32 @@
-function quick_sort(array, low, high)
-    if (low < high)
-        pivot = partition(array, low, high)
-
-        quick_sort(array, low, pivot-1)
-        quick_sort(array, pivot+1, high)
-    end
-end
-
-# Обмен элементами массива
-function swap(arr, i, j)
-    temp = arr[i]
-    arr[i] = arr[j]
-    arr[j] = temp
-end
-
-# Разбиение массива на две части
-function partition(array, low, high)
-    pivot = array[high]
-
-    i = low-1
-    for j in low:high-1
-        if (array[j] <= pivot)
-            i +=1
-            swap(array, i, j)
+function part_sort!(A, b)
+    N = length(A)
+    K=0
+    L=0
+    M=N
+    #ИНВАРИАНТ: A[1:K] < b && A[K+1:L] == b && A[M+1:N] > b
+    while L < M 
+        if A[L+1] == b
+            L += 1
+        elseif A[L+1] > b
+            A[L+1], A[M] = A[M], A[L+1]
+            M -= 1
+        else # if A[L+1] < b
+            L += 1; K += 1
+            A[L], A[K] = A[K], A[L]
         end
     end
-    swap(array, i+1, high)
-    return i+1
+    return K, M+1 
+    # 1:K и M+1:N - эти диапазоны индексов определяют ещё не 
+    # отсортированные части массива A
 end
 
-
-array = [1,3,4,2,1,6,3,9,7,2,4,6,1,3,2,7,8,1,2,0,4,11,2]
-
-n = size(array, 1)
-quick_sort(array, 1, n)
-println(array)
+function quick_sort!(A)
+    if isempty(A)
+        return A
+    end
+    N = length(A)
+    K, M = part_sort!(A, A[rand(1:N)]) # - "базовый" элемент массива выбирается случайнам образом
+    quick_sort!(@view A[1:K])
+    quick_sort!(@view A[M:N])
+    return A
+end

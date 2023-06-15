@@ -1,4 +1,4 @@
-# Лежат ли две точки по одну сторону от заданной кривой(F(x,y)=0)
-function same_side_of_curve(F::Function,p1::Vector2D, p2::Vector2D)
-    F(p1.x, p1.y) * F(p2.x, p2.y) > 0
-end
+# Общий случай для заданной кривой F(x,y) = 0
+is_one_area(F::Function, P::Vector2D{T}, Q::Vector2D{T}) where T = (F(P...)*F(Q...)>0)
+
+#для двух точек P, Q лежащих в одной и той же области  неравенство F(x,y) < 0 выполняется или не выполняется одновременно.

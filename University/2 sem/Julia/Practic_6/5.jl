@@ -1,20 +1,12 @@
-# Проверка, лежит ли точка внутри многоугольника
-function point_inside_polygon(p::Vector2D, poly::Array{Vector2D{T}, 1}) where T<:Real
-    winding_number = 0
-    num_vertices = length(poly)
-    for i in 1:num_vertices
-        edge_start = poly[i]
-        edge_end = poly[mod(i, num_vertices) + 1]
-        if edge_start.y != edge_end.y && min(edge_start.y, edge_end.y) < p.y <= max(edge_start.y, edge_end.y)
-            x_intersection = edge_start.x + (p.y - edge_start.y) * (edge_end.x - edge_start.x) / (edge_end.y - edge_start.y)
-            if p.x < x_intersection
-                if edge_start.y < edge_end.y
-                    winding_number += 1
-                else
-                    winding_number -= 1
-                end
-            end
-        end
-    end
-    return winding_number != 0
+# Проверка лежит ли точка внутри многоугольника
+function isinside(point::Vector2D{T},polygon::AbstractArray{Vector2D{T}})::Bool where T
+	sum = zero(Float64)
+
+    # Если сумма углов 0 — снаружи. 2π — внутри
+	for i in firstindex(polygon):lastindex(polygon)
+		sum += angle( polygon[i] - point , polygon[i % lastindex(polygon) + 1] - point )
+	end
+	
+    # Чтобы не было неточностей при сравнении сравним с π(если < то это 0, если больше то 2π)
+	return abs(sum) > π
 end

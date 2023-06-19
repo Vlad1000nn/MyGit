@@ -1,16 +1,5 @@
-using LinearAlgebra
-function gaussian_elimination(A)
-    n = size(A, 1)
-
-    for k = 1:n-1
-        for i = k+1:n
-            factor = A[i,k] / A[k,k]
-            A[i,k:end] -= factor * A[k,k:end]
-        end
-    end
-
-    return A
+for n in 50:50:1000
+	println("Матрица порядка ",n,"×",n,":")
+	@time ReverseGauss_first!(randn(n,n),randn(n))
+	@time ReverseGauss!(randn(n,n),randn(n))
 end
-
-A = rand(Float64, (1000, 1000))
-@time gaussian_elimination(A)

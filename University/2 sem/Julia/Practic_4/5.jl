@@ -1,17 +1,16 @@
-# Приведение матрицы к ступеньчатому виду
-using LinearAlgebra
-function gaussian_elimination(A)
-    n = size(A, 1)      # Определяем размерность матрицы A
-    for k = 1:n-1
-        for i = k+1:n
-            factor = A[i,k] / A[k,k]             # Вычисляем множ factor
-            A[i,k:end] -= factor * A[k,k:end]    # Обнуляем элементы в столбце k ниже строки k
-            
-        end
-    end
-    return A
+#Приведение матрицы к ступеньчатому виду
+function TransformToSteps!(matrix::AbstractMatrix, epsilon::Real = 1e-7)::AbstractMatrix
+	@inbounds for k ∈ 1:size(matrix, 1)
+		absval, Δk = findmax(abs, @view(matrix[k:end,k]))
+
+		(absval <= epsilon) && throw("Вырожденая матрица")
+
+		Δk > 1 && swap!(@view(matrix[k,k:end]), @view(matrix[k+Δk-1,k:end]))
+
+		for i ∈ k+1:size(matrix,1)
+			t = matrix[i,k]/matrix[k,k]
+			@. @views matrix[i,k:end] = matrix[i,k:end] - t * matrix[k,k:end]  
+		end
+	end
+	return matrix
 end
-
-
-A = [1 2 4 2; 3 5 2 11; 2 6 7 9]
-println(gaussian_elimination(A))

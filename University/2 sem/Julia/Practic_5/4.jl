@@ -1,6 +1,7 @@
+# Сортировка слиянием
 function Base.merge!(a1, a2, a3)::Nothing 
     i1, i2, i3 = 1, 1, 1
-    @inbounds while i1 <= length(a1) && i2 <= length(a2) # @inbounds - передотвращает проверки выхода за пределы массивов
+    @inbounds while i1 <= length(a1) && i2 <= length(a2) 
         if a1[i1] < a2[i2]
             a3[i3] = a1[i1]
             i1 += 1

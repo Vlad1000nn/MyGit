@@ -1,27 +1,20 @@
-# Гаусс решение СЛАУ
-using LinearAlgebra
-function gaussian_elimination(A, b)
-    n = size(A, 1)      # Определяем размерность матрицы A
-    println(n)
-    for k = 1:n-1
-        for i = k+1:n
-            factor = A[i,k] / A[k,k]                # Вычисляем множитель factor
-            A[i,k:end] -= factor * A[k,k:end]       # Обнуляем элементы в столбце k ниже строки k
-            b[i] -= factor * b[k]                    # Обновляем вектор b
-        end
-    end
-     # Вычисляем решение системы линейных уравнений с помощью обратного хода метода Гаусса
-    x = zeros(n)
-    x[n] = b[n] / A[n,n]
-    for k = n-1:-1:1
-        x[k] = (b[k] - dot(A[k,k+1:end], x[k+1:end])) / A[k,k]
-    end
-    
-    return x
+# Метод Гаусса
+
+@inline function sumprod(vec1::AbstractVector{T}, vec2::AbstractVector{T})::T where T
+	s = zero(T)
+	@inbounds for i in eachindex(vec1)
+	s = fma(vec1[i], vec2[i], s) # fma(x, y, z) вычисляет выражение x*y+z
+	end
+	return s
 end
 
+function ReverseGauss!(matrix::AbstractMatrix{T}, vec::AbstractVector{T})::AbstractVector{T} where T
+	x = similar(vec)
+	N = size(matrix, 1)
 
-A = [1 2 4; 3 5 2; 2 6 7]
-b = [3; 4; 1]
+	for k in 0:N-1
+		x[N-k] = (vec[N-k] - sumprod(@view(matrix[N-k,N-k+1:end]), @view(x[N-k+1:end]))) / matrix[N-k,N-k]
+	end
 
-println(gaussian_elimination(A, b))
+	return x
+end

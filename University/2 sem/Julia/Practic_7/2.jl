@@ -1,3 +1,4 @@
+# Генерация всех перестановок
 function next_permutation!(p::AbstractVector)
     n = length(p)
     k = 0 

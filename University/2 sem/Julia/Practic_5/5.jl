@@ -1,3 +1,4 @@
+# Сортировка Хоара
 function part_sort!(A, b)
     N = length(A)
     K=0

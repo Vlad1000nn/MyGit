@@ -4,6 +4,7 @@ class SegmentTree
 private:
     vector<long long> tree;
     int size;
+
 public:
 
     //Конструктор
@@ -11,6 +12,8 @@ public:
         : size(_size)
         , tree(_size << 2)
     { }
+
+
 
     //Билд дерева
     void build(const vector<int>& a)

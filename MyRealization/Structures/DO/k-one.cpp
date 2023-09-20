@@ -1,4 +1,3 @@
-//Базовый на сумму
 class SegmentTree
 {
 private:

@@ -17,7 +17,7 @@ private:
 
 public:
 
-    // Basic Concstructors
+    // Basic Constructors
     SplayNode<T>()
         : data()
         , right(nullptr)
@@ -94,7 +94,9 @@ template<typename T>
 class SplayTree
 {
 private:
+    // Root of the tree
     SplayNode<T>* root;
+    // Size of the tree
     int size;
 
 public:
@@ -159,7 +161,7 @@ private:
 
 public:
 
-    // Insert element in a tree
+    // Insert the element in a tree
     void insert(const T& data)
     {
         SplayNode<T>* newNode = new SplayNode<T>(data);
@@ -316,8 +318,8 @@ public:
         if (root->getData() != data)
             return root;
 
-        // P.first  -> left  subTree
-        // P.second -> right subTree
+        // p.first  -> left  subTree
+        // p.second -> right subTree
         std::pair<SplayNode<T>*, SplayNode<T>*> p = split(root);
 
         if (p.first->getLeft())
@@ -373,6 +375,7 @@ private:
 
 public:
 
+    // InOrder travelsal
     std::vector<T> inOrder(SplayNode<T>* _root = nullptr)   const
     {
         if (!_root) _root = root;
@@ -399,6 +402,7 @@ public:
         return ans;
     }
 
+    // PreOrder travelsal
     std::vector<T> preOrder(SplayNode<T>* _root = nullptr)  const
     {
         if (!_root) _root = root;
@@ -423,6 +427,7 @@ public:
         return ans;
     }
 
+    // PostOrder travelsal
     std::vector<T> postOrder(SplayNode<T>* _root = nullptr) const
     {
         if (!_root) _root = root;
@@ -461,6 +466,7 @@ public:
 
 private:
 
+    // Print help function(choosing right order)
     void print_Helper(int index, SplayNode<T>* _root)   const
     {
         std::vector<T> ans;
@@ -489,9 +495,79 @@ public:
         print_Helper(3, _root);
     }
 
+    // Destructor
     ~SplayTree<T>()
     {
         while (size)
             erase(root->getData());
     }
 };
+
+#include <numeric>
+
+int main()
+{
+    using namespace std;
+
+    std::vector<int> vec{ 2, 5, 7, 3, 4, 10, 1, 6, 9, 8 };
+
+    for (auto& it : vec) cout << it << ' ';
+    cout << '\n';
+
+    SplayTree<int> tree{ vec };
+
+    std::cout << "Our start tree is:\n";
+    tree.print_preOrder();
+    std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    std::cout << "Find maximum:" << tree.findMax()->getData() << '\n';
+    std::cout << "Our tree now "; tree.print_preOrder(); std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    std::cout << "Find minimum:" << tree.findMin()->getData() << '\n';
+    std::cout << "Our tree now "; tree.print_preOrder(); std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    int x = 1;
+
+    std::cout << "Erase the " << x << '\n';
+    tree.erase(x);
+    std::cout << "Our tree now "; tree.print_preOrder(); std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    x = 7;
+    std::cout << "Erase the " << x << '\n';
+    tree.erase(x);
+    std::cout << "Our tree now "; tree.print_preOrder(); std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    x = 10;
+    std::cout << "Erase the " << x << '\n';
+    tree.erase(x);
+    std::cout << "Our tree now "; tree.print_preOrder(); std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    x = 3;
+    std::cout << "Search the " << x << '\n';
+    tree.search(x);
+    std::cout << "Our tree now "; tree.print_preOrder(); std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    x = 10;
+    std::cout << "Search the " << x << '\n';
+    tree.search(x);
+    std::cout << "Our tree now "; tree.print_preOrder(); std::cout << "Root " << tree.getRoot()->getData() << " Size " << tree.getSize() << "\n\n";
+
+    using vi = vector<int>;
+
+    vi vecc = tree.inOrder();
+    std::cout << "InOrder:\t";
+    for (auto& it : vecc) cout << it << ' ';
+    cout << '\n';
+
+    vecc = tree.preOrder();
+    std::cout << "PreOrder:\t";
+    for (auto& it : vecc) cout << it << ' ';
+    cout << '\n';
+
+    vecc = tree.postOrder();
+    std::cout << "PostOrder:\t";
+    for (auto& it : vecc) cout << it << ' ';
+    cout << '\n';
+
+    return 0;
+}

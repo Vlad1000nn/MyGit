@@ -17,7 +17,7 @@ private:
 
 public:
 
-    // Basic Concstructors
+    // Basic Constructors
     SplayNode<T>()
         : data()
         , right(nullptr)
@@ -96,7 +96,7 @@ class SplayTree
 private:
     // Root of the tree
     SplayNode<T>* root;
-    // SIze of the tree
+    // Size of the tree
     int size;
 
 public:
@@ -161,7 +161,7 @@ private:
 
 public:
 
-    // Insert element in a tree
+    // Insert the element in a tree
     void insert(const T& data)
     {
         SplayNode<T>* newNode = new SplayNode<T>(data);
@@ -318,8 +318,8 @@ public:
         if (root->getData() != data)
             return root;
 
-        // P.first  -> left  subTree
-        // P.second -> right subTree
+        // p.first  -> left  subTree
+        // p.second -> right subTree
         std::pair<SplayNode<T>*, SplayNode<T>*> p = split(root);
 
         if (p.first->getLeft())
@@ -466,7 +466,7 @@ public:
 
 private:
 
-    // Print help funtion(choosing right order)
+    // Print help function(choosing right order)
     void print_Helper(int index, SplayNode<T>* _root)   const
     {
         std::vector<T> ans;

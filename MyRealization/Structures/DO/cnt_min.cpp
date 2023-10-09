@@ -2,7 +2,7 @@ class SegmentTree
 {
 private:
 
-    struct node {
+    stringuct node {
         int mins;
         int count;
     };

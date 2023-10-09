@@ -61,25 +61,4 @@ public:
         return res;
     }
 
-
-    int lower_bound(int x)
-    {
-        int g = 0;
-        while (g < (int)s.size() && s[g] < x)
-        {
-            x -= s[g];
-            ++g;
-        }
-        int i = g * gsize;
-        const int end = min(g * gsize, (int)a.size());
-        while (i < end && a[i] < x)
-        {
-            x -= a[i];
-            if (x == 0)
-                return i;
-            ++i;
-        }
-        return i;
-    }
-
 };

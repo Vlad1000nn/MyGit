@@ -149,6 +149,29 @@ public:
 	{
 		Node::degree = degree;
 	}
+
+	// Remove Node from the list(index = 0 mean full-cut)
+	inline void removeFromList(int index = 0)
+	{
+		this->getLeft()->setRight(this->getRight());
+		this->getRight()->setLeft(this->getLeft());
+
+		if (!index)
+		{
+			setLeft(nullptr);
+			setRight(nullptr);
+		}
+	}
+
+	// Insert x to the list near y
+	friend void insert(Node<T>* x, Node<T>* y)
+	{
+		x->setLeft(y);
+		x->setRight(y->getRight());
+
+		y->getRight()->setLeft(x);
+		y->setRight(x);
+	}
 };
 
 
@@ -186,9 +209,7 @@ protected:
 	Node<T>* link(Node<T>* child, Node<T>* parent)
 	{
 		child->setParent(parent);
-
-		child->getLeft()->setRight(child->getRight());
-		child->getRight()->setLeft(child->getLeft());
+		child->removeFromList(1);
 
 		if (!parent->getChild())
 		{
@@ -196,12 +217,8 @@ protected:
 			child->setLeft(child);
 			child->setRight(child);
 		}
-		else {
-			child->setLeft(parent->getChild());
-			child->setRight(parent->getChild()->getRight());
-			parent->getChild()->getRight()->setLeft(child);
-			parent->getChild()->setRight(child);
-		}
+		else
+			insert(parent->getChild(()), child);
 
 		parent->setDegree(parent->getDegree() + 1);
 
@@ -260,14 +277,8 @@ protected:
 			{
 				if (min)
 				{
-					it->getLeft()->setRight(it->getRight());
-					it->getRight()->setLeft(it->getLeft());
-
-					it->setLeft(min);
-					it->setRight(min->getRight());
-
-					min->getRight()->setLeft(it);
-					min->setRight(it);
+					it->removeFromList(1);
+					insert(min, it);
 				}
 				else min = it;
 			}
@@ -309,17 +320,12 @@ protected:
 			if (parent->getChild() == child)
 				parent->setChild(child->getLeft());
 
-			child->getLeft()->setRight(child->getRight());
-			child->getRight()->setLeft(child->getLeft());
+			child->removeFromList(1);
 		}
 
 		parent->setDegree(parent->getDegree() - 1);
 
-		child->setLeft(min);
-		child->setRight(min->getRight());
-
-		min->getRight()->setLeft(child);
-		min->setRight(child);
+		insert(min, child);
 
 		child->setParent(nullptr);
 		child->setMark(false);
@@ -437,10 +443,7 @@ public:
 		}
 		else
 		{
-			node->setRight(min->getRight());
-			min->getRight()->setLeft(node);
-			min->setRight(node);
-			node->setLeft(min);
+			insert(min, node);
 			unite(node);
 		}
 		++count;
@@ -463,12 +466,7 @@ public:
 			{
 				Node<T>* next = child->getRight();
 
-				min->getLeft()->setRight(child);
-				child->setLeft(min->getLeft());
-
-				child->setRight(min);
-				min->setLeft(child);
-
+				insert(min, child);
 				unite(child);
 
 				child->setParent(nullptr);
@@ -476,8 +474,7 @@ public:
 			} while (child != minNode->getChild());
 		}
 
-		minNode->getLeft()->setRight(minNode->getRight());
-		minNode->getRight()->setLeft(minNode->getLeft());
+		minNode->removeFromList(1);
 
 		if (minNode == minNode->getRight())
 			min = nullptr;

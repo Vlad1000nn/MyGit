@@ -316,10 +316,11 @@ public:
 
 	//Занесение элемента в конец списка
 	void push_back(const T& _data) {
-		if (head == nullptr)						//Если список пустой
+		if (!head)						//Если список пустой
 			head = tail = new Node<T>(_data);
 		else {
-			tail->next = new Node<T>(_data, tail);
+			tail->next = new Node<T>(_data, tail); // Нет проверки на неудачное выделение памяти
+			if (!tail->next) throw bad_allocs();
 			tail = tail->next;
 		}
 		++size;

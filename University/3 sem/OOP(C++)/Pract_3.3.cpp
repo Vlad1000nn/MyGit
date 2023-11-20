@@ -218,7 +218,7 @@ protected:
 			child->setRight(child);
 		}
 		else
-			insert(parent->getChild(()), child);
+			insert(parent->getChild(), child);
 
 		parent->setDegree(parent->getDegree() + 1);
 

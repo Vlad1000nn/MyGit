@@ -3,6 +3,7 @@
 #include <queue>
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 
 #define isz(x) (int)(x).size();
 #define all(x) (x).begin(), (x).end()
@@ -13,7 +14,7 @@ using PriorityQueue = std::priority_queue<T, std::vector<T>, std::greater<T>>;
 using vi = std::vector<int>;
 using vvi = std::vector<vi>;
 
-const int INF = int(pow(2, 31) - 1);
+const int INF = int(std::pow(2, 31) - 1);
 
 
 // Basic DFS with matrix

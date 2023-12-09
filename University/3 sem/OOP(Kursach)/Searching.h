@@ -1,9 +1,4 @@
 #pragma once
-
-// Conflict with std::max and std::min because of #define somewhere
-#undef max
-#undef min
-
 #include "Header.h"
 
 // Boyer-Moore algorithm
@@ -120,18 +115,6 @@ class Hash
 {
 private:
 
-    // Our text
-    std::wstring text;
-
-    // Size of the text
-    int n;
-
-    // Hash prefix-values
-    std::vector<int> hashes;
-
-    // p^i, for i = 0,1,..,n-1,n
-    std::vector<int> powers;
-
     // Module q
     static constexpr uint32_t q = static_cast<uint64_t>((1LL << 31) - 1LL);
 
@@ -144,29 +127,9 @@ private:
     int type;
 
     // Build
-    void build()
+    void build(int n)
     {
         p = gen(n / 2, n - 2);
-        build_powers();
-        build_hashes();
-    }
-
-    // Build powers
-    void build_powers()
-    {
-        powers.assign(n, 1LL);
-
-        for (int i = 1; i < n; ++i)
-            powers[i] = (powers[i - 1] * 1LL * p) % q;
-    }
-
-    // Build hashes
-    void build_hashes()
-    {
-        hashes.assign(n + 1, 0);
-
-        for (int i = 1; i <= n; ++i)
-            hashes[i] = (hashes[i - 1] * 1LL * p + text[i - 1]) % q;
     }
 
     // Generate
@@ -182,38 +145,48 @@ private:
     {
         int result{};
         const int sz = static_cast<int>(str.size());
-        for (int i = 0; i < sz; ++i)
-            result = (result + str[i] * 1LL * powers[sz - i - 1]) % q;
+        int p_power = 1;
+        for (int i = sz-1; i >=0; --i) {
+            result = (result + str[i] * 1LL * p_power) % q;
+            p_power = (1LL * p_power * p) % q;
+        }
         return result;
+
     }
 
-    // Hash from i to j
-    int hash(int i, int j)  const
+    // Binary pow + module q
+    int binpow(long long a, long long n)    const
     {
-        return (hashes[j] - (hashes[i - 1] * 1LL * powers[j - i + 1]) % q + q) % q;
+        if (!n) return 1;
+
+        long long res = 1 % q;
+        while (n)
+        {
+            if (n & 1)
+            {
+                res *= a;
+                res %= q;
+            }
+            a *= a;
+            a %= q;
+            n >>= 1;
+        }
+
+        return res % q;
     }
 
     // Compare hashes
-    void cmp_hashes(int curr, int index, int patt, const std::wstring& currs, const std::wstring& pattern, std::vector<int>& ans) const
+    void cmp_hashes(int curr_hash, int patt_hash, int index, const std::wstring& text, const std::wstring& pattern, std::vector<int>& ans) const
     {
-        if (curr == patt)
+        if (curr_hash == patt_hash)
         {
-            const int sz = static_cast<int>(pattern.size());
             if (type == 2)
             {
-                int cnt = sz / 2;
-                int curr_index;
-                while (cnt--)
-                {
-                    curr_index = gen(0, sz);
-                    if (currs[curr_index] != pattern[curr_index])
-                        return;
-                }
-            }
-            else if (type == 3)
-            {
-                for (int i = 0; i < sz; ++i)
-                    if (currs[i] != pattern[i])
+                const int sz = static_cast<int>(pattern.size());
+                std::wstring::const_iterator iterator = text.begin() + index;
+                int i;
+                for (i = 0; i < sz; ++i,++iterator)
+                    if (pattern[i] != *iterator)
                         return;
             }
 
@@ -221,80 +194,61 @@ private:
         }
     }
 
+    // Module q
+    long long module(long long x)
+    {
+        return (x < 0 ? (q - (-x % q) % q) : (x % q));
+    }
+
+
 public:
 
     // Basic constructor
     Hash()
         : type(2)
-        , text(L"")
-        , n(0)
     { }
 
     // Construcotr with std::wstring
     Hash(const std::wstring& text) : Hash()
-    {
-        rebuild(text);
-    }
+    { }
 
     // Constructor with std::string
     Hash(const std::string& text) : Hash(std::wstring{ text.begin(),text.end() })
     { }
 
-    // Rebuild for new text
-    void rebuild(const std::wstring& text)
-    {
-        if (Hash::text == text) return;
-
-        Hash::text = text;
-        n = static_cast<int>(text.size());
-        build();
-    }
-
-    // Rebuild for std::string
-    void rebuild(const std::string& text)
-    {
-        rebuild(std::wstring{ text.begin(),text.end() });
-    }
-
     // Find pattern positions in text
-    std::vector<int> find(const std::wstring& pattern) const
+    std::vector<int> find(const std::wstring& pattern, const std::wstring& text)
     {
+        const int n = (int)text.size();
         const int patt_size = static_cast<int>(pattern.size());
+
         if (patt_size > n) return {};
+        build(n);
 
         const int end = n - static_cast<int>(pattern.size()) + 1;
         const int patt_hash = hash(pattern);
 
         std::wstring currs{ text.begin(), text.begin() + patt_size };
 
-        int curr_hash = hash(1, patt_size);
+        int curr_hash = hash(text.substr(0, patt_size));
 
         std::vector<int> ans;
-        cmp_hashes(curr_hash, 0, patt_hash, currs, pattern, ans);
+        cmp_hashes(curr_hash, patt_hash, 0, text, pattern, ans);
+        const int p_pow = binpow(p, patt_size - 1);
 
         for (int i = 1; i < end; ++i)
         {
-            currs.erase(0, 1);
-            currs += text[i + patt_size - 1];
-
-            curr_hash = hash(i + 1, i + 1 + patt_size - 1);
-
-            cmp_hashes(curr_hash, i, patt_hash, currs, pattern, ans);
+            curr_hash = (module(curr_hash - text[i - 1] * 1LL * p_pow) * p * 1LL + text[i + patt_size - 1]) % q;
+            cmp_hashes(curr_hash, patt_hash,i, text, pattern, ans);
         }
 
         return ans;
     }
 
     // Find with std::string
-    std::vector<int> find(const std::string& pattern)   const
+    std::vector<int> find(const std::string& pattern, const std::string& text)
     {
-        return find(std::wstring{ pattern.begin(), pattern.end() });
-    }
-
-    // Checking build it or not
-    bool is_build() const
-    {
-        return n;
+        return find(std::wstring{ pattern.begin(), pattern.end() }, std::wstring{ text.begin(),text.end() });
     }
 
     // Turn on quickSearch type
@@ -303,16 +257,16 @@ public:
         type = 1;
     }
 
-    // Turn on optimal search
-    void optimal()
+    // Turn on accurace slow mode
+    void accurate()
     {
         type = 2;
     }
 
-    // Turn on accurace slow mode
-    void accurate()
+    //Return current type
+    const int state()   const
     {
-        type = 3;
+        return type;
     }
 
     // Basic destructor
@@ -320,7 +274,6 @@ public:
 
 
 };
-
 
 // Knuth-Morris-Pratt
 class KMP
@@ -393,7 +346,6 @@ public:
         const int n = (int)text.size();
         const int m = (int)pattern.size();
 
-        // начиная отсюда, я не знаю как правильно написать
         for (int i = begin, k = 0; i < n; ++i)
         {
             while (k >= 0 && pattern[k] != text[i])
@@ -651,10 +603,47 @@ public:
 };
 
 
+// Naive search
+class Naive
+{
+public:
+
+    // Default constructor
+    Naive() = default;
+
+    // Find with std::wstring
+    std::vector<int> find(const std::wstring& pattern, const std::wstring& text)    const
+    {
+        std::vector<int> ans;
+        const int n = (int)text.size();
+        const int m = (int)pattern.size();
+
+        std::wstring buff;
+
+        for (int i = 0; i < n - m + 1; ++i)
+        {
+            buff = text.substr(i, m);
+            if (buff == pattern)
+                ans.push_back(i);
+        }
+
+        return ans;
+    }
+
+    // Find with std::string
+    std::vector<int> find(const std::string& pattern, const std::string& text) const
+    {
+        return find(std::wstring{ pattern.begin(),pattern.end() }, std::wstring{ text.begin(),text.end() });
+    }
+
+    // Default destructor
+    ~Naive() = default;
+
+};
 
 
 // Timer
-class Timerr
+class Timer
 {
 private:
     using Clock = std::chrono::steady_clock;
@@ -671,56 +660,4 @@ public:
     {
         return std::chrono::duration_cast<Second>(Clock::now() - m_beg).count();
     }
-};
-
-
-// Help-class to create vector<int>
-class INT_VECTOR
-{
-private:
-
-
-    std::vector<int> vec;
-
-
-public:
-
-    INT_VECTOR() = default;
-
-
-    INT_VECTOR(int n)
-        : vec(n)
-    { }
-
-
-    int size() const
-    {
-        return (int)vec.size();
-    }
-
-
-    void clear()
-    {
-        vec.clear();
-    }
-
-
-    void rebuild(const std::vector<int>& _vec)
-    {
-        vec = _vec;
-    }
-
-
-    int& at(int index)
-    {
-        return vec[index];
-    }
-
-
-    ~INT_VECTOR()
-    {
-        clear();
-    }
-
-
 };

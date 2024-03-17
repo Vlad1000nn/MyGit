@@ -1,0 +1,243 @@
+//#pragma GCC optimize("Ofast,unroll-loops")
+//#pragma GCC target("avx,avx2,fma")
+//#pragma GCC optimize("trapv")
+//#include <bits/stdc++.h>
+ 
+#include <iostream>
+#include <cmath>
+#include <iomanip>
+#include <numeric>
+#include <algorithm>
+ 
+#include <chrono>
+#include <ctime>
+#include <random>
+ 
+#include <list>
+#include <string>
+#include <vector>
+#include <bitset>
+#include <set>
+#include <queue>
+#include <deque>
+#include <map>
+#include <stack>
+#include <unordered_map>
+#include <unordered_set>
+ 
+#include <map>
+#include <queue>
+#include <cassert>
+#include <algorithm>
+#include <functional>
+ 
+#include <fstream>
+#include <sstream>
+ 
+ 
+#define isz(x) (int)x.size()
+#define all(x) (x).begin(),(x).end()
+ 
+using namespace std;
+ 
+template<typename T>
+using PriorityQueue = priority_queue<T, vector<T>, greater<T>>;
+ 
+template<typename T>
+using MAP = map<T, T, greater<T>>;
+ 
+template<typename T>
+using SET = set<T, T, greater<T>>;
+ 
+template<typename T>
+using MULTISET = multiset<T, T, greater<T>>;
+ 
+ 
+ 
+using ll = long long;
+using vll = vector<long long>;
+using vvll = vector<vll>;
+ 
+using ull = unsigned long long;
+ 
+ 
+using vi = vector<int>;
+using vvi = vector<vi>;
+using vvvi = vector<vvi>;
+ 
+namespace Random
+{
+    std::mt19937 mt{ std::random_device{}() };
+ 
+    int get(int min, int max)
+    {
+        std::uniform_int_distribution<> die{ min, max };
+        return die(mt);
+    }
+}
+ 
+ 
+class Timer
+{
+private:
+    using Clock = std::chrono::steady_clock;
+    using Second = std::chrono::duration<double, std::ratio<1> >;
+    std::chrono::time_point<Clock> m_beg{ Clock::now() };
+public:
+ 
+    void reset()
+    {
+        m_beg = Clock::now();
+    }
+ 
+    double elapsed() const
+    {
+        return std::chrono::duration_cast<Second>(Clock::now() - m_beg).count();
+    }
+};
+ 
+ 
+template<typename T>
+std::istream& operator>>(std::istream& in, vector<T>& vec)
+{
+    for (auto& it : vec)
+        in >> it;
+    return in;
+}
+ 
+// Overload vector output
+template<typename T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T>& vec)
+{
+    for (auto& it : vec)
+        out << it << ' ';
+ 
+    return out;
+}
+ 
+ 
+ll binpow(ll a, ll n)
+{
+    if (!n) return 1;
+ 
+    ll res{ 1 };
+    while (n)
+    {
+        if (n & 1)
+            res *= a;
+        a *= a;
+        n >>= 1;
+    }
+    return res;
+}
+ 
+ 
+ll binpow(ll a, ll n, ll mod)
+{
+    if (!n) return 1;
+ 
+    ll res = 1 % mod;
+    while (n)
+    {
+        if (n & 1)
+        {
+            res *= a;
+            res %= mod;
+        }
+        a *= a;
+        a %= mod;
+        n >>= 1;
+ 
+    }
+ 
+    return res % mod;
+}
+ 
+ 
+// Р СџР ВµРЎР‚Р ВµР В±Р С•РЎР‚ Р Р…Р В°Р С—РЎР‚Р В°Р Р†Р В»Р ВµР Р…Р С‘Р в„–
+const int N[4][2] = {
+          {-1,0}, {0, 1}, {1,0}, {0,-1}
+};
+ 
+const int INF = int(1e9);
+const ll INFL = ll(1e18);
+const ull INFUL = ull(1e19);
+ 
+const ll MOD = 1000000000 + 7;
+ 
+const int UNDEF = -1;
+////////////////////////////////////////////////////////////////////////////////////
+ 
+using vpii = vector<pair<int, int >>;
+using vpll = vector<pair<ll, ll>>;
+ 
+ 
+//#define int ll
+ 
+void makeFull(vvi& dp, int number, int index)
+{
+    for (int i = index + 1; i < 16; ++i)
+        dp[number][i] = dp[number][index];
+}
+ 
+void solve()
+{
+    int n; cin >> n;
+    if (n == 1) { cout << 1; return; }
+ 
+    vvi dp(n + 1, vi(16)); // dp[i][j], РґР»СЏ С‡РёСЃР»Р° i РєРѕР»РёС‡РµСЃС‚РІРѕ СЂР°Р·Р»РѕР¶РµРЅРёР№ СЃ РїРѕРјРѕС‰СЊСЋ СЃС‚РµРїРµРЅРµР№ РґРІРѕР№РєРё <= j
+ 
+    for (int i = 0; i < 16; ++i)
+        dp[0][i] = dp[1][i] = 1;
+    for (int i = 0; i <= n; ++i)
+        dp[i][0] = 1;
+ 
+ 
+    for (int number = 2; number <= n; ++number)
+    {
+        int power;
+        for (power = 1; binpow(2, power) <= number; ++power)
+        {
+            dp[number][power] += dp[number][power-1] + dp[number - binpow(2, power)][power];
+        }
+        makeFull(dp, number, power - 1);
+    }
+ 
+    //for (auto& it : dp[n])
+    //    cout << it << ' ';
+     
+    cout << dp[n][15];
+}
+ 
+void solve1()
+{
+    int n; cin >> n;
+    vi vec(n); cin >> vec;
+    vvi dp(n, vi(4));
+    for (int i = 0; i < n; ++i)
+        dp[i][1] = 1;
+ 
+ 
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 2; j <= 3; ++j)
+        {
+            dp[i][j] = vec[i] * dp[i - 1][j - 1] + dp[i - 1][j];
+        }
+    }
+ 
+    cout << dp[n - 1][3];
+}
+ 
+ 
+int32_t main()
+{
+    cin.tie(0);
+    std::ios_base::sync_with_stdio(false);
+ 
+    int32_t t{ 1 };
+    //cin >> t;
+    while (t--)
+        solve();
+    return 0;
+}

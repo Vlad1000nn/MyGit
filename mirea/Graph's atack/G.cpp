@@ -174,11 +174,6 @@ using vpll = vector<pair<ll, ll>>;
 
 //#define int ll
 
-void dfs()
-{
-
-}
-
 void solve()
 {
     int n, m; cin >> n >> m;

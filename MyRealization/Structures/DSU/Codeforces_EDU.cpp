@@ -557,6 +557,94 @@ void solve()
  
 }
 
+// Bosses
+class DSU
+{
+private:
+ 
+    vi sz, parent;
+    vi len;
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(n+1,1)
+        , parent(n+1)
+        , len(n+1)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    // y главнее
+    void merge(int x, int y)
+    {
+        // Два случая
+        // Первый когда мы подсоединяем меньшего к большему как надо
+        // Второй когда нам нужно подвесить их наоборот
+ 
+        // В первом случае мы соединяем и в длину кладём 1-curr, где curr это len[y]
+        // Во втором случае мы увеличиваем len[x] на 1, и отнимаем от len[y] и подвешиваем
+        x = getParent(x).first;
+        y = getParent(y).first;
+ 
+        if (sz[y] < sz[x]) {
+            len[x]++;
+            len[y] -= len[x];
+            std::swap(x, y);
+        }
+        else {
+            len[x] += 1 - len[y];
+        }
+ 
+        sz[y] += sz[x];
+        parent[x] = y;
+    }
+ 
+    std::pair<int, int> getParent(int x)
+    {
+        int length = 0;
+        while (x != parent[x])
+        {
+            length += len[x];
+            x = parent[x];
+        }
+        length += len[x];
+        return { x, length };
+    }
+ 
+    int get(int x)
+    {
+        return getParent(x).second;
+    }
+    
+};
+ 
+ 
+ 
+void solve()
+{
+    int n, m; cin >> n >> m;
+    DSU dsu(n);
+    const int MERGE = 1, GET = 2;
+    while (m--)
+    {
+        int type; cin >> type;
+        if (MERGE == type)
+        {
+            int a, b; cin >> a >> b;
+            dsu.merge(a, b);
+        }
+        else if (GET == type)
+        {
+            int c; cin >> c;
+            std::cout << dsu.get(c) << '\n';
+        }
+        else throw 1;
+    }
+ 
+}
+
 // Spannig Tree
 
 
@@ -641,6 +729,95 @@ void solve()
  
  
     std::cout << answ;
+ 
+}
+
+// Oil business
+
+class DSU
+{
+private:
+ 
+    vi sz, parent;
+ 
+    int getParent(int x)
+    {
+        return x == parent[x] ? x : parent[x] = getParent(parent[x]);
+    }
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(n+1,1)
+        , parent(n+1)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    // y главнее
+    bool merge(int x, int y)
+    {
+        x = getParent(x);
+        y = getParent(y);
+        if (x == y)
+            return false;
+ 
+        sz[x] += sz[y];
+        parent[y] = x;
+        return true;
+    }
+    
+};
+ 
+ 
+ 
+void solve()
+{
+    int n, m; ll s; cin >> n >> m >> s;
+    vector<tuple<int, int, int,int>> vec;
+    int index = 1;
+    while (m--)
+    {
+        int u, v, w; cin >> u >> v >> w;
+        vec.push_back({ w,u,v,index });
+        ++index;
+    }
+    DSU dsu(n);
+ 
+ 
+    sort(all(vec), [&](const auto& x, const auto& y) {
+ 
+        return get<0>(x) > get<0>(y);
+        });
+ 
+    vector<tuple<int, int, int, int>> edges;
+    for (auto& [w, u, v,index] : vec)
+    {
+        if (!dsu.merge(u, v))
+        {
+            edges.push_back({ w,u,v,index });
+        }
+    }
+    vi answ;
+ 
+ 
+    sort(all(edges));
+    for (auto& [w, u, v, index] : edges)
+    {
+        if (s - w >= 0)
+        {
+            s -= w;
+            answ.push_back(index);
+        }
+        else  break;
+    }
+ 
+    sort(all(answ));
+ 
+    std::cout << isz(answ) << '\n';
+    for (auto& it : answ)
+        std::cout << it << ' ';
  
 }
 

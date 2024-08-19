@@ -732,6 +732,180 @@ void solve()
  
 }
 
+//   Dense spanning tree
+
+
+class DSU
+{
+private:
+ 
+    vi sz, parent, len;
+    int n;
+ 
+    int getParent(int x)
+    {
+        return x == parent[x] ? x : parent[x] = getParent(parent[x]);
+    }
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(n+1,1)
+        , parent(n+1)
+        , len(n+1)
+        , n(n)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    // len[x] — минимальное количество топлива необходимое чтобы доехать до корня
+    bool merge(int x, int y)
+    {
+        x = getParent(x);
+        y = getParent(y);
+        if (x == y)
+            return false;
+        
+        if (sz[x] < sz[y])
+            std::swap(x, y);
+        
+        sz[x] += sz[y];
+        parent[y] = x;
+ 
+ 
+        return sz[x] == n;
+    }
+ 
+};
+ 
+ 
+ 
+void solve()
+{
+    int n, m; cin >> n >> m;
+    vector<tuple<int, int, int>> vec(m);
+    for (auto& [w, u, v] : vec)
+    {
+        cin >> u >> v >> w;
+    }
+    sort(all(vec));
+    ll answ = INFL;
+    for (int i = 0; i < m; ++i)
+    {
+        DSU dsu(n);
+        for (int j = i; j < m; ++j)
+        {
+            if (dsu.merge(get<1>(vec[j]), get<2>(vec[j])))
+            {
+                setmin(answ, get<0>(vec[j]) - get<0>(vec[i])); 
+            }
+        }
+    }
+ 
+ 
+    if (answ == INFL)
+        std::cout << "NO";
+    else {
+        std::cout << "YES\n" << answ;
+    }
+ 
+}
+
+
+// No refuel
+
+
+class DSU
+{
+private:
+ 
+    vi sz, parent, len;
+ 
+    std::pair<int,int> getParent(int x)
+    {
+        int length = 0;
+        while (x != parent[x])
+        {
+            setmax(length, len[x]);
+            x = parent[x];
+        }
+        setmax(length, len[x]);
+        return { x, length };
+    }
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(n+1,1)
+        , parent(n+1)
+        , len(n+1)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    // len[x] — минимальное количество топлива необходимое чтобы доехать до корня
+    void merge(int x, int y, int w)
+    {
+        std::pair<int,int> valx = getParent(x);
+        std::pair<int,int> valy = getParent(y);
+ 
+        // Если они в одной группе
+        if (valx.first == valy.first)
+            return;
+ 
+        
+        sz[valx.first] += sz[valy.first];
+        parent[valy.first] = valx.first;
+        setmax(len[valy.first], w);
+    }
+    
+    int get(int x)
+    {
+        return getParent(x).second;
+    }
+ 
+};
+ 
+ 
+ 
+void solve()
+{
+    int n, m; cin >> n >> m;
+    DSU dsu(n);
+ 
+    std::map<std::pair<int, int>, int> mp;
+ 
+    while (m--)
+    {
+        int u, v, w; cin >> u >> v >> w;
+        if (mp.find({ u,v }) != mp.end())
+        {
+            setmin(mp[{u, v}], w);
+        }
+        else mp[{u, v}] = w;
+    }
+ 
+    vector<tuple<int, int, int>> edges;
+    for (auto& [key,val] : mp)
+    {
+        edges.push_back({ val,key.first,key.second });
+    }
+ 
+    sort(all(edges));
+ 
+    for (auto& [w, u, v] : edges)
+        dsu.merge(u, v, w);
+ 
+    int answ = 0;
+    for (int i = 1; i <= n; ++i)
+    {
+        setmax(answ, dsu.get(i));
+    }
+    std::cout << answ;
+}
+
 // Oil business
 
 class DSU
@@ -821,6 +995,84 @@ void solve()
  
 }
 
+// Bipartite Graph
+
+class DSU
+{
+private:
+ 
+    vi sz, parent;
+ 
+    int getParent(int x)
+    {
+        return x == parent[x] ? x : getParent(parent[x]);
+    }
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(2 * n + 2, 1)
+        , parent(2 * n + 2)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    
+    void merge(int x, int y)
+    {
+        x = getParent(x);
+        y = getParent(y);
+        if (x == y)
+            return;
+ 
+        if (sz[x] < sz[y])
+            std::swap(x, y);
+        
+        sz[x] += sz[y];
+        parent[y] = x;
+    }
+ 
+ 
+    bool get(int x, int y)
+    {
+        return getParent(x) == getParent(y);
+    }
+ 
+};
+ 
+ 
+ 
+void solve()
+{
+    int n, m; cin >> n >> m;
+    int shift = 0;
+    DSU dsu(n);
+ 
+    const int MERGE = 0, GET = 1;
+    while (m--)
+    {
+        int type, a, b; cin >> type >> a >> b;
+        int x = (a + shift) % n;
+        int y = (b + shift) % n;
+ 
+        if (MERGE == type)
+        {
+            dsu.merge(x, n + y);
+            dsu.merge(n + x, y);
+        }
+        else if (GET == type)
+        {
+            bool answ = dsu.get(x, y);
+            if (answ)
+                shift = (shift + 1) % n;
+            std::cout << (answ ? "YES\n" : "NO\n");
+        }
+        else throw 1;
+    }
+ 
+}
+
 
 // First Non-Bipartite Edge
 
@@ -897,4 +1149,273 @@ void solve()
  
  
  
+}
+
+
+/* # Step 3 */
+
+// DSU with rollback
+
+
+class DSU
+{
+private:
+ 
+    vi sz, parent, next;
+    int numSets;
+    vector<tuple<pair<int, int>, pair<int, int>, int>> versions;
+ 
+    int getParent(int x)
+    {
+        return x == parent[x] ? x : getParent(parent[x]);
+    }
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(n + 1, 1)
+        , parent(n + 1)
+        , numSets(n)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    
+    int merge(int x, int y)
+    {
+        x = getParent(x);
+        y = getParent(y);
+        if (x == y)
+            return numSets;
+ 
+        if (sz[x] < sz[y])
+            std::swap(x, y);
+ 
+        versions.push_back({ {sz[x],x},{parent[y],y},numSets });
+ 
+        sz[x] += sz[y];
+        parent[y] = x;
+        return --numSets;
+    }
+ 
+ 
+    int rollback(int version)
+    {
+        while (isz(versions) != version)
+        {
+            tuple<pair<int, int>, pair<int, int>, int> last = versions.back();
+            sz[get<0>(last).second] = get<0>(last).first;
+            parent[get<1>(last).second] = get<1>(last).first;
+            numSets = get<2>(last);
+            versions.pop_back();
+        }
+ 
+        return numSets;
+    }
+    
+    int getVersion()    const
+    {
+        return isz(versions);
+    }
+ 
+};
+ 
+ 
+ 
+void solve()
+{
+    int n, m; cin >> n >> m;
+    DSU dsu(n);
+ 
+    std::vector<int> versions;
+    while (m--)
+    {
+        string type; cin >> type;
+        if (type[0] == 'u')
+        {
+            int u, v; cin >> u >> v;
+            std::cout << dsu.merge(u, v) << '\n';
+        }
+        else if (type[0] == 'p')
+        {
+            versions.push_back(dsu.getVersion());
+        }
+        else if (type[0] == 'r')
+        {
+            std::cout << dsu.rollback(versions.back()) << '\n';
+            versions.pop_back();
+        }
+        else throw 1;
+    }
+ 
+}
+
+
+// Number of Connected Components on Segments
+
+class DSU
+{
+private:
+ 
+    vi sz, parent, next;
+    int numCC;
+    vector<tuple<pair<int, int>, pair<int, int>, int>> versions;
+ 
+    int getParent(int x)
+    {
+        return x == parent[x] ? x : getParent(parent[x]);
+    }
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(n + 1, 1)
+        , parent(n + 1)
+        , numCC(n)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    
+    void merge(int x, int y)
+    {
+        x = getParent(x);
+        y = getParent(y);
+        if (x == y)
+            return;
+ 
+        if (sz[x] < sz[y])
+            std::swap(x, y);
+ 
+        versions.push_back({ {sz[x],x},{parent[y],y},numCC });
+ 
+        sz[x] += sz[y];
+        parent[y] = x;
+        --numCC;
+    }
+ 
+ 
+    int rollback(int version)
+    {
+        while (isz(versions) != version)
+        {
+            tuple<pair<int, int>, pair<int, int>, int> last = versions.back();
+            sz[get<0>(last).second] = get<0>(last).first;
+            parent[get<1>(last).second] = get<1>(last).first;
+            numCC = get<2>(last);
+            versions.pop_back();
+        }
+ 
+        return numCC;
+    }
+ 
+ 
+    int getVersion()    const
+    {
+        return isz(versions);
+    }
+ 
+    int getAnsw()   const
+    {
+        return numCC;
+    }
+ 
+};
+ 
+ 
+ 
+void solve()
+{
+    // Ответы буду записывать просто в мапу чтобы не хранить номера запросов
+    map<pair<int, int>, int> answ;
+    // Вводим рёбра
+    int n, m; cin >> n >> m;
+    vector<pair<int, int>> edges(m + 1);
+    edges.push_back({ 0,0 });
+    for (int i = 1; i <= m; ++i)
+        cin >> edges[i].first >> edges[i].second;
+    int k; cin >> k;
+    // Ввели запросы
+    vector<pair<int, int>> queries;
+    for (int i = 0; i < k; ++i)
+    {
+        int l, r; cin >> l >> r;
+        queries.push_back({ l,r });
+    }
+    // Запомним порядок
+    const vector<pair<int, int>> remember = queries;
+    // Посортили по левой границе
+    sort(all(queries));
+    // Теперь разбиваем на группы по sqrt(m)
+    int gsize = (int)ceil(sqrt((m + 1) / 2.0));
+    const int nG = (m + 1) / gsize + 1;
+ 
+    int index = 0;
+    // Начинаем обрабатывать группы
+    for (int g = 0; g < nG; ++g)
+    {
+        const int start = g * gsize;
+        const int end = min(m + 1, start + gsize);
+ 
+        // easy запросы — у которых правая граница внутри блока
+        vector<pair<int, int>> easy;
+        // hard запросы — остальные
+        vector<pair<int, int>> hard;
+        while (index < k && queries[index].first < end)
+        {
+            if (queries[index].second < end)
+                easy.push_back(queries[index]);
+            else 
+                hard.push_back(queries[index]);
+            ++index;
+        }
+        // Сортим по правой границе
+        sort(all(hard), [&](const auto& x, const auto& y) {
+            return x.second < y.second;
+            });
+        // Поехали обрабатывать запросы
+        // Начнём с простых 
+        for (auto& [li, ri] : easy)
+        {
+            // Если запрос уже обрабатывали то ничего не надо
+            if (answ.find({ li,ri }) != answ.end())
+                continue;
+            // Просто для каждого запроса создали DSU и втупую собрали ответ
+            DSU dsu(n);
+            for (int i = li; i <= ri; ++i)
+                dsu.merge(edges[i].first, edges[i].second);
+            answ[{li, ri}] = dsu.getAnsw();
+        }
+        // Теперь к сложным запросам
+        // Создаём DSU с откатами
+        DSU dsu(n);
+        int right = end;
+        for (auto& [li, ri] : hard)
+        {
+            if (answ.find({ li,ri }) != answ.end())
+                continue;
+            // Собираем все рёбра начиная с того где закончили до ri
+            for (int i = right; i <= ri; ++i)
+                dsu.merge(edges[i].first, edges[i].second);
+            // Точка отката
+            const int persist = dsu.getVersion();
+            // Теперь идём влево с начала некст группы до li и получаем ответ
+            for (int i = end - 1; i >= li; --i)
+                dsu.merge(edges[i].first, edges[i].second);
+            answ[{li, ri}] = dsu.getAnsw();
+            // Теперь откатываем левую границу
+            dsu.rollback(persist);
+            // Двигаем границу для мержа
+            right = ri + 1;
+        }
+ 
+    }
+ 
+    // Выводим ответ
+    for (auto& [l, r] : remember)
+    {
+        std::cout << answ[{l, r}] << '\n';
+    }
 }

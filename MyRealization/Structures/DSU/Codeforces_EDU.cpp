@@ -1419,3 +1419,171 @@ void solve()
         std::cout << answ[{l, r}] << '\n';
     }
 }
+
+
+// Dynamic Connectivity Offline
+ 
+class DSU
+{
+private:
+ 
+    vi sz, parent, next;
+    int numCC;
+    vector<tuple<pair<int, int>, pair<int, int>, int>> versions;
+ 
+    int getParent(int x)
+    {
+        return x == parent[x] ? x : getParent(parent[x]);
+    }
+ 
+ 
+public:
+ 
+    DSU(const int n)
+        : sz(n + 1, 1)
+        , parent(n + 1)
+        , numCC(n)
+    {
+        std::iota(all(parent), 0);
+    }
+ 
+    
+    void merge(int x, int y)
+    {
+        x = getParent(x);
+        y = getParent(y);
+        if (x == y)
+            return;
+ 
+        if (sz[x] < sz[y])
+            std::swap(x, y);
+ 
+        versions.push_back({ {sz[x],x},{parent[y],y},numCC });
+ 
+        sz[x] += sz[y];
+        parent[y] = x;
+        --numCC;
+    }
+ 
+ 
+    int rollback(int version)
+    {
+        while (isz(versions) != version)
+        {
+            tuple<pair<int, int>, pair<int, int>, int> last = versions.back();
+            sz[get<0>(last).second] = get<0>(last).first;
+            parent[get<1>(last).second] = get<1>(last).first;
+            numCC = get<2>(last);
+            versions.pop_back();
+        }
+ 
+        return numCC;
+    }
+ 
+ 
+    int getVersion()    const
+    {
+        return isz(versions);
+    }
+ 
+    int getAnsw()   const
+    {
+        return numCC;
+    }
+ 
+ 
+    void SegTree(const vector <tuple<int, int, int, int>>& edges, const vector<int>& gets, int l, int r)
+    {
+        if (l + 1 == r)
+        {
+            const int persist = this->getVersion();
+            auto x = lower_bound(all(edges), std::tuple<int, int, int, int>(0, 0, l, 0));
+            if (x != edges.end() && get<2>(*x) <= l && get<3>(*x) >= r)
+                this->merge(get<0>(*x), get<1>(*x));
+                
+            
+            auto y = lower_bound(all(gets), l);
+            if(y != gets.end() && *y == l)
+                    std::cout << this->numCC << '\n';
+                
+            this->rollback(persist);
+        }
+        else {
+            const int persist = this->getVersion();
+            vector<int> gets2;
+            vector<tuple<int, int, int, int>> edges2;
+            for (auto& it : edges)
+            {
+                if (l >= get<2>(it) && r <= get<3>(it))
+                    this->merge(get<0>(it), get<1>(it));
+                else if(!(l >= get<3>(it) || r <= get<2>(it)))
+                    edges2.push_back(it);
+            }
+ 
+            for (auto& t : gets)
+                if (t >= l && t < r)
+                    gets2.push_back(t);
+ 
+            int mid = (l + r) >> 1;
+            SegTree(edges2, gets2, l, mid);
+            SegTree(edges2, gets2, mid, r);
+ 
+            this->rollback(persist);
+        }
+    }
+ 
+};
+ 
+ 
+void solve()
+{
+    int n, m; cin >> n >> m;
+    if (!m)
+        return;
+    vector<int> gets;
+    vector<tuple<int, int, int>> adds;
+    vector<tuple<int, int, int, int>> edges;
+    for (int i = 0; i < m; ++i)
+    {
+        char type; cin >> type;
+        if (type == '?')
+            gets.push_back(i);
+        else if (type == '+') {
+            int u, v; cin >> u >> v;
+            if (u > v)
+                std::swap(u, v);
+            adds.push_back({ u,v,i });
+        }
+        else if (type == '-')
+        {
+            int u, v; cin >> u >> v;
+            if (u > v)
+                std::swap(u, v);
+            
+            for (auto& it : adds)
+            {
+                if (u == get<0>(it) && v == get<1>(it))
+                {
+                    if (get<2>(it) >= i)
+                        break;
+                    edges.push_back({ u,v,get<2>(it),i + 1 });
+                    it = std::tuple<int, int, int>{ 0,0,0 };
+                    break;
+                }
+            }
+        }
+        else throw 1;
+    }
+ 
+    
+    for (auto& q1 : adds)
+    {
+        if (q1 == std::tuple<int, int, int>{0, 0, 0})
+            continue;
+ 
+        edges.push_back({ get<0>(q1),get<1>(q1),get<2>(q1),m});
+    }
+    DSU dsu(n);
+    dsu.SegTree(edges, gets, 0, m);
+ 
+}

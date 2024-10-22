@@ -106,7 +106,7 @@ struct BigInt
 			if (less)
 				std::swap(a, b);
 
-			res = subtration(*a, *b);	
+			res = subtraction(*a, *b);	
 			res_sign = (less == sign ? 0 : 1);
 		}
 		else
@@ -145,7 +145,7 @@ struct BigInt
 			if (less)
 				std::swap(a, b);
 
-			res = subtration(*a, *b);
+			res = subtraction(*a, *b);
 			res_sign = (less == sign ? 0 : 1);
 		}
 		return BigInt{ res, res_sign };
@@ -202,7 +202,7 @@ struct BigInt
 		return res;
 	}
 
-	std::vector<int> subtration(const std::vector<int>& first, const std::vector<int>& second)	const
+	std::vector<int> subtraction(const std::vector<int>& first, const std::vector<int>& second)	const
 	{
 		std::vector<int> a = first;
 		std::vector<int> b = second;

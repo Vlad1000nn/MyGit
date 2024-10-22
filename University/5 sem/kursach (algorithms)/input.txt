@@ -1,0 +1,2 @@
+Hello world!
+This is test text for encoding.

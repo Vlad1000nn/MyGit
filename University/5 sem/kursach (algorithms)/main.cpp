@@ -1,768 +1,584 @@
-﻿#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <set>
-#include <vector>
-#include <string>
-#include <boost/dynamic_bitset.hpp>
-#include <queue>
-#include <numeric>
-#include <map>
+﻿#define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 
-
-/*
+#include "Tests.h"
 #include <chrono>
-class Timer
+#include <iostream>
+#include <string>
+
+
+#include "Huffman.h"
+#include "HuffmanDecoder.h"
+#include "Timer.h"
+
+
+#include <sstream>
+#include <fstream>
+#include <codecvt>
+#include <memory> // for std::unique_ptr
+
+
+std::wstring readFile(const std::string& filename)
 {
-private:
-	using Clock = std::chrono::steady_clock;
-	using Second = std::chrono::duration<double, std::ratio<1> >;
-	std::chrono::time_point<Clock> m_beg{ Clock::now() };
-public:
-
-	void reset()
-	{
-		m_beg = Clock::now();
-	}
-
-	double elapsed() const
-	{
-		return std::chrono::duration_cast<Second>(Clock::now() - m_beg).count();
-	}
-};
-*/
-
-
-
-// Naive solve (static length of codes)
-class NaiveSolve 
-{
-private:
-
-	boost::dynamic_bitset<> code; // output
-	std::string text;			  // input
-	std::vector<int> symbols;	  // symbols
-	std::vector<boost::dynamic_bitset<>> encode;	// codes for symbols
-
-
-	// Make a set of symbols
-	void get_all_symbols()
-	{
-		std::set<int> unique;
-		for (char& it : text)
-			unique.insert((int)it);
-		symbols = std::vector<int>(unique.begin(), unique.end());
-	}
-
-
-	void make_encodes()
-	{
-		const int count = (int)symbols.size();
-		const int bit_count = (int)std::ceil(std::log2((int)symbols.size()));
-		encode.resize(count);
-
-		int i{};
-		for (; i < count; ++i)
-			encode[i] = boost::dynamic_bitset<>(bit_count, i);
-	}
-
-
-public:
-
-	NaiveSolve(const std::string& input)
-		: text(input)
-	{
-		get_all_symbols();
-		make_encodes();
-	}
-
-
-	boost::dynamic_bitset<> solve()
-	{
-		boost::dynamic_bitset<> buff;
-		for (const char& it : text)
-		{
-			buff = encode[std::lower_bound(symbols.begin(), symbols.end(), it) - symbols.begin()];
-			code.resize((int)code.size() + (int)buff.size());
-			code <<= (int)buff.size();
-			buff.resize((int)code.size());
-			code |= buff;
-		}
-
-		return code;
-	}
-
-
-	std::pair<std::vector<int>, std::vector<boost::dynamic_bitset<>>> getDecoder()	const
-	{
-		return make_pair(symbols, encode);
-	}
-
-	
-};
-
-
-// Decoder of naive solution
-class NaiveDecoder
-{
-private:
-
-	std::vector<std::pair<char, boost::dynamic_bitset<>>> decode;
-	int code_size;
-
-
-	const char get_symbol(boost::dynamic_bitset<> bits)	const
-	{
-		for (const std::pair<char, boost::dynamic_bitset<>>& it : decode)
-		{
-			if (it.second == bits)
-				return it.first;
-		}
-		throw std::runtime_error("Unknown code");
-	}
-
-
-public:
-
-	// Constructor
-	NaiveDecoder(std::ifstream& in)
-	{
-		std::string s;
-		int symbol;  char colon; std::string word;
-		while (getline(in, s))
-		{
-			std::stringstream ss(s);
-			ss >> symbol >> colon >> word;
-			boost::dynamic_bitset<> bits(word);
-			decode.push_back({ char(symbol), bits });
-		}
-
-		for (auto& it : decode)
-			std::cout << it.first << " : " << it.second << '\n';
-
-		code_size = (int)decode[0].second.size();
-
-	}
-
-
-	std::string decode_text(const std::string& text)	const
-	{
-		const int n = (int)text.size();
-		std::string answ;
-		std::string current;
-		int index{};
-		for (; index < n; index += code_size)
-		{
-			current = text.substr(index, code_size);
-			const boost::dynamic_bitset<> bits(current);
-			answ += get_symbol(bits);
-		}
-
-		return answ;
-	}
-
-};
-
-
-class Huffman 
-{
-private:
-
-	struct Node 
-	{
-	public:
-		int freq, data;
-		Node* left, *right;
-
-		Node(const int data, const int freq)
-			: data(data)
-			, freq(freq)
-			, left(nullptr)
-			, right(nullptr)
-		{ }
-	};
-
-	Node* root;
-
-	// Build tree using heap, O(nlogn)
-	void build(const std::vector<int>& symbols, const std::vector<int>& frequency)
-	{
-		const int n = (int)symbols.size();
-		std::vector<Node*> minHeap;
-		auto node_compare = [&minHeap](const Node* x, const Node* y) { return x->freq > y->freq; };
-		int i{};
-		Node* left, *right, *top;
-		for (; i < n; ++i)
-			minHeap.push_back(new Node(symbols[i], frequency[i]));
-
-		std::make_heap(minHeap.begin(), minHeap.end(), node_compare);
-
-		while ((int)minHeap.size() > 1) 
-		{
-			std::pop_heap(minHeap.begin(), minHeap.end(), node_compare);
-			left = minHeap.back();
-			minHeap.pop_back();
-
-			std::pop_heap(minHeap.begin(), minHeap.end(), node_compare);
-			right = minHeap.back();
-			minHeap.pop_back();
-
-			top = new Node(0, left->freq + right->freq);
-			top->left = left;
-			top->right = right;
-
-			minHeap.push_back(top);
-			std::push_heap(minHeap.begin(), minHeap.end(), node_compare);
-		}
-
-		root = minHeap[0];
-	}
-
-	// If data is sorted we can build it with O(n)
-	void build_sorted(const std::vector<int>& symbols, const std::vector<int>& frequency)
-	{
-		const int n = (int)symbols.size();
-		std::queue<Node*> q1, q2;
-		int i{};
-		Node* left, *right, *top;
-		for(; i < n; ++i)
-			q1.push(new Node(symbols[i], frequency[i]));
-	
-		while ((int)q1.size() + (int)q2.size() > 1)
-		{
-			left = extarct_min(q1, q2);
-			right = extarct_min(q1, q2);
-
-			top = new Node(0, left->freq + right->freq);
-			top->left = left;
-			top->right = right;
-			q2.push(top);
-		}
-		root = ((int)q1.size() ? q1.front() : q2.front());
-	}
-
-	// Help function to extract minimum from our 2 queues
-	static Node* extarct_min(std::queue<Node*>& q1, std::queue<Node*>& q2)
-	{
-		Node* answ;
-		if (!(int)q2.size())
-		{
-			answ = q1.front();
-			q1.pop();
-		} else {
-			if (!(int)q1.size())
-			{
-				answ = q2.front();
-				q2.pop();
-			}
-			else {
-				answ = std::min(q1.front()->freq, q2.front()->freq) == q1.front()->freq ? q1.front() : q2.front();
-				answ == q1.front() ? q1.pop() : q2.pop();
-			}
-		}
-		return answ;
-	}
-
-
-public:
-
-	// Constructor
-	Huffman(const std::vector<int>& symbols, const std::vector<int>& frequency, bool sorted = false)
-	{
-		sorted && std::is_sorted(frequency.begin(), frequency.end()) ? build_sorted(symbols, frequency) : build(symbols, frequency);
-	}
-
-	// return pairs <symbol, code>
-	std::vector<std::pair<int, std::string>> get_code()	const
-	{
-		std::vector<std::pair<int, std::string>> answ;
-		Node* curr = root;
-		std::string str;
-		std::queue<std::pair<Node*, std::string>> q;
-		q.push({ curr, "" });
-		while (!q.empty())
-		{
-			std::tie(curr, str) = q.front();
-			q.pop();
-			if (!curr)
-				continue;
-			if (curr->data)
-				answ.push_back({ curr->data, str });
-			q.push({ curr->left, str + "0" });
-			q.push({ curr->right, str + "1" });
-		}
-
-		return answ;
-	}
-
-	// Destructor
-	~Huffman()
-	{
-		Node* curr;
-		std::queue<Node*> q;
-		q.push(root);
-		while (!q.empty())
-		{
-			curr = q.front();
-			q.pop();
-			if (!curr)
-				continue;
-			q.push(curr->left);
-			q.push(curr->right);
-			curr->left = curr->right = nullptr;
-			delete curr;
-		}
-	}
-
-};
-
-
-
-class HuffmanDecoder
-{
-private:
-
-	struct Node 
-	{
-	public:
-		int data;
-		Node* left, *right;
-
-		Node(const int data = 0)
-			: data(data)
-			, left(nullptr)
-			, right(nullptr)
-		{ }
-
-	};
-
-	// Table with codes for symbols
-	std::map<std::string, int> codes;
-	// max depth of the tree
-	int max_cnt;
-
-	Node* root;
-
-	// We need to build our tree(bcs we want easily decode our messages)
-	void build_tree(Node* curr, const int n, const std::string& s)
-	{
-		if (codes[s])
-			curr->data = codes[s];
-
-		if (n < max_cnt) {
-			curr->left = new Node();
-			curr->right = new Node();
-
-			build_tree(curr->left, n + 1, s + "0");
-			build_tree(curr->right, n + 1, s + "1");
-		}
-	}
-
-
-public:
-
-
-	// Get the input file and build table
-	HuffmanDecoder(std::ifstream& in)
-		: max_cnt(0)
-	{
-		root = new Node();
-		int symbol;
-		char colon;
-		std::string s;
-		while (getline(in, s))
-		{
-			std::stringstream ss(s);
-			ss >> symbol >> colon >> s;
-			codes[s] = symbol;
-			max_cnt = std::max(max_cnt, (int)s.size());
-		}
-
-		build_tree(root, 0, "");
-	}
-
-
-	std::string decode(const std::string& text)	const
-	{
-		Node* curr = root;
-		std::string answ;
-		const int n = (int)text.size();
-		int i{};
-
-		while (i < n)
-		{
-			curr = (text[i] == '0' ? curr->left : curr->right);
-			if (curr->data)
-			{
-				answ += curr->data;
-				curr = root;
-			}
-			++i;
-		}
-
-		return answ;
-	}
-
-	// Destructor
-	~HuffmanDecoder()
-	{
-		Node* curr;
-		std::queue<Node*> q;
-		q.push(root);
-		while (!q.empty())
-		{
-			curr = q.front();
-			q.pop();
-			if (!curr)
-				continue;
-			q.push(curr->left);
-			q.push(curr->right);
-			curr->left = curr->right = nullptr;
-			delete curr;
-		}
-	}
-};
-
-
-std::string& increment(std::string& str)
-{
-	int index = (int)str.size() - 1;
-
-	while (index >= 0 && str[index] == '1')
-	{
-		str[index] = '0';
-		--index;
-	}
-
-	if (index == -1)
-		str = '1' + str;
-	else str[index] = '1';
-
-	return str;
-}
-
-std::pair<std::vector<std::pair<int,int>>, std::vector<std::pair<int, std::string>>> canonical_huffman(const std::vector<std::pair<int, std::string>>& codes)
-{
-	std::vector<std::pair<int, int>> stoi_codes;
-	const int n = (int)codes.size();
-	int i{};
-	for (; i < n; ++i)
-		stoi_codes.push_back({ codes[i].first, (int)codes[i].second.size() });
-
-
-	std::vector<std::pair<int, std::string>> answ(n);
-
-	std::string current(stoi_codes[0].second, '0');
-	answ[0] = { stoi_codes[0].first, current };
-	i = 1;
-
-	while (i < n)
-	{
-		if (stoi_codes[i].second == stoi_codes[i - 1].second)
-			answ[i] = { stoi_codes[i].first, increment(current) };
-		else
-			answ[i] = { stoi_codes[i].first, increment(current) += std::string(stoi_codes[i].second - stoi_codes[i - 1].second, '0') };
-		++i;
-	}
-	// a 2
-	// b 3
-	// c 3
-	// 00
-	// 010
-	// 011
-	std::cout << "ANSW:\n";
-	for (auto& it : answ)
-		std::cout << it.first << " : " << it.second << '\n';
-
-	return {stoi_codes, answ};
+	std::wifstream wif(filename);
+	wif.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::wstringstream wss;
+	wss << wif.rdbuf();
+	return wss.str();
 }
 
 
-
-class CanonicalHuffmanDecoder
+void war_and_peace_huffman_encode(const std::string& filename)
 {
-private:
+	Timer t;
 
-	struct Node {
-		Node* left, *right;
-		int data;
-		Node(const int data = 0)
-			: data(data)
-			, left(nullptr)
-			, right(nullptr)
-		{ }
-	};
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
 
-	std::map<std::string, int> codes;
-	Node* root;
-	int max_cnt;
+	std::wstring text = readFile(filename);
+	std::wofstream out("test/huffman/war_and_peace_codes.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read huffman encoding time: " << t_read->elapsed() << '\n';
+	t_read.reset(); // Run destructor
+	
+	std::unique_ptr<Timer> t_prebuild = std::make_unique<Timer>();
+	
+	// get freq
+	std::map<wchar_t, int> mp;
+	std::vector<int> symb, freq;
+	for (auto& it : text)
+		mp[it]++;
 
-
-	void build_tree(Node* curr, const int n, const std::string& s)
+	for (auto& [key, val] : mp)
 	{
-		if (codes[s])
-			curr->data = codes[s];
-
-		if (n < max_cnt) {
-			curr->left = new Node();
-			curr->right = new Node();
-
-			build_tree(curr->left, n + 1, s + "0");
-			build_tree(curr->right, n + 1, s + "1");
-		}
+		symb.push_back(key);
+		freq.push_back(val);
 	}
+	std::cout << "Prebuild huffman encoding time: " << t_prebuild->elapsed() << '\n';
+	t_prebuild.reset();
 
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	// Build Huffman
+	Huffman huffman_tree(symb, freq);
+	std::cout << "Build huffman encoding time: " << t_build->elapsed() << '\n';
+	t_build.reset();
 
-	static std::string& increment(std::string& str)
-	{
-		int index = (int)str.size() - 1;
-		
-		while (index >= 0 && str[index] == '1')
-		{
-			str[index] = '0';
-			--index;
-		}
+	std::unique_ptr<Timer> t_out = std::make_unique<Timer>();
+	std::vector<std::pair<int, std::wstring>> code = huffman_tree.get_code<wchar_t>();
 
-		if (index == -1)
-			str = '1' + str;
-		else str[index] = '1';
-		
-		return str;
-	}
+	std::map<int, std::wstring> codes(code.begin(), code.end());
+	for (auto& [symb, str] : code)
+		out << symb << L": " << str << L'\n';
 
+	out.close();
+	std::cout << "Out huffman encoding time: " << t_out->elapsed() << '\n';
+	t_out.reset();
 
-	void build_table(const std::vector<std::pair<int, int>>& decode)
-	{
-		std::string current(decode[0].second, '0');
-		codes[current] = decode[0].first;
-		int i{1};
-		const int n = (int)decode.size();
-		while (i < n)
-		{
-			if (decode[i].second == decode[i - 1].second)
-				codes[increment(current)] = decode[i].first;
-			else
-				codes[increment(current) += std::string(decode[i].second - decode[i - 1].second, '0')] = decode[i].first;
-			++i;
-		}
+	// Try to encode with the table
+	std::wofstream encode_message("test/huffman/war_and_peace_encode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
 
-		std::cout << "Table:\n";
-		for (auto& it : codes)
-			std::cout << it.first << " : " << it.second << '\n';
-	}
+	std::unique_ptr<Timer> t_encode = std::make_unique<Timer>();
 
-
-public:
-
-	CanonicalHuffmanDecoder(std::ifstream& in)
-	{
-		std::vector<std::pair<int, int>> decodes;
-		root = new Node();
-		int symbol, len;
-		std::string s;
-		while (getline(in, s))
-		{
-			std::stringstream ss(s);
-			ss >> symbol >> len;
-			decodes.push_back({ symbol, len });
-		}
-		max_cnt = decodes.back().second;
-
-		build_table(decodes);
-		build_tree(root, 0, "");
-	}
-
-
-	std::string solve(const std::string& text)
-	{
-		Node* curr = root;
-		std::string answ;
-		const int n = (int)text.size();
-		int i{};
-
-		while (i < n)
-		{
-			curr = (text[i] == '0' ? curr->left : curr->right);
-			if (curr->data)
-			{
-				answ += curr->data;
-				curr = root;
-			}
-			++i;
-		}
-
-		return answ;
-	}
-
-
-};
-
-
-// tests 1-3
-void tests()
-{
-
-	std::ifstream test_input("test1.txt");			// test 1
-	std::ofstream test_output("test1_answ.txt");
-
-	//std::ifstream test_input("test2.txt");			// test 2
-	//std::ofstream test_output("test2_answ.txt");
-
-	//std::ifstream test_input("test3.txt");			// test 3
-	//std::ofstream test_output("test3_answ.txt");
-
-	int cnt; test_input >> cnt;
-	std::vector<int> arr;
-	std::vector<int> freq;
-	int buff; test_input >> buff;
-	arr.push_back(1);
-	freq.push_back(buff);
-
-	for (int i = 1; i < cnt; ++i)
-	{
-		arr.push_back(arr[i - 1] + 1);	// In tests we don't have current symbols, so i just use numbers 1, 2, .., n
-		test_input >> buff;
-		freq.push_back(buff);
-	}
-	Huffman huffmanTree(arr, freq);
-
-	std::vector<std::pair<int, std::string>> code = huffmanTree.get_code();
-	for (auto& [symbol, encode] : code)
-		test_output << symbol << " : " << encode << '\n';	// result of the test in the answ.txt
+	for (auto& it : text)
+		encode_message << codes[it];
+	std::cout << "Encode huffman encoding time: " << t_encode->elapsed() << '\n';
+	out.close();
+	std::cout << "Full Encoding time: " << t.elapsed() << '\n';
 
 	long double average{};	// let's calculate average length of message by symbol
 	long long summary = std::accumulate(freq.begin(), freq.end(), 0ll);
 
 	for (auto& [symbol, encode] : code)
 	{
-		int index = std::lower_bound(arr.begin(), arr.end(), symbol) - arr.begin();
+		int index = std::lower_bound(symb.begin(), symb.end(), symbol) - symb.begin();
 		average += (long double)encode.size() * freq[index] / summary;
 	}
 	std::cout << std::fixed << "avg len: " << average << '\n';
-
-	/*
-	Difference in average len:
-	test1: 3.154696 vs 4  ~ -21%
-	test2: 3.668163 vs 4  ~ -8%
-	test3: 9.709104 vs 13 ~ -25%
-	*/
-
-	test_input.close();
-	test_output.close();
-
 }
 
 
-// Sample test
-void baftest()
+void war_and_peace_huffman_decode()
 {
-	std::ofstream huffman_out("huffman_decoder.txt");
-	std::vector<int> arr = { 'a',	'b',	'c',	'd',	'e',	'f' };
-	std::vector<int> freq = { 5,	9,		12,		13,		16,		45 };
+	Timer t;
+	
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
 
-	Huffman huffmanTree(arr, freq, true);
+	std::string filename = "test/huffman/war_and_peace_encode.txt";
+	std::wstring text = readFile(filename);
+	std::wifstream in("test/huffman/war_and_peace_codes.txt");
+	in.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read huffman decoding time: " << t_read->elapsed() << '\n';
+	t_read.reset();
 
-	std::vector<std::pair<int, std::string>> code = huffmanTree.get_code();
-	for (auto& [symbol, encode] : code)						// write table to huffman_decoder.txt
-		huffman_out << symbol << " : " << encode << '\n';
-
-	huffman_out.close();
-
-	std::ifstream huffman_decode("huffman_decoder.txt");	// let's decode message with table
-	HuffmanDecoder huffmanDecoder(huffman_decode);
-
-	std::string s = "110111000110111000";	// this is message
-
-	std::string answ = huffmanDecoder.decode(s);	// time to decode!
-	std::cout << "decode message:" << answ << '\n';
-
-	huffman_decode.close();
-}
-
-
-// Naive solve test
-void naive()
-{
-	std::ifstream in("input.txt");
-	std::ofstream out("output.txt");
-	std::stringstream ss; ss << in.rdbuf();
-
-	std::string s;
-	s = ss.str();
-	std::cout << s << '\n';	// Input text
-
-	NaiveSolve solve(s);
-	boost::dynamic_bitset<> answ = solve.solve();
-	out << answ; // write encode message to output.txt
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	HuffmanDecoder<wchar_t> huffman_decoder(in);
+	std::cout << "Build huffman decoding time: " << t_build->elapsed() << '\n';
+	t_build.reset();
 
 	in.close();
+
+	std::wofstream out("test/huffman/war_and_peace_decode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
+	std::unique_ptr<Timer> t_decode = std::make_unique<Timer>();
+	std::wstring total = huffman_decoder.decode(text);
+	std::cout << "Decode huffman decoding time: " << t_decode->elapsed() << '\n';
+
+	out << total;
 	out.close();
 
-	std::ofstream decode_out("decoder.txt");	// Read table with symbols
-	std::pair<std::vector<int>, std::vector<boost::dynamic_bitset<>>> decoder = solve.getDecoder();
-	const int n = (int)decoder.first.size();
-	for (int i = 0; i < n; ++i)
-		decode_out << decoder.first[i] << " : " << decoder.second[i] << "\n";
-	
-	decode_out.close();
-
-
-	std::ifstream decode_input("decoder.txt");
-	std::ifstream text_input("output.txt");		// message with naive encoding
-	getline(text_input, s);
-
-	NaiveDecoder decoder_2(decode_input); // let's decode it
-	std::string decode_text = decoder_2.decode_text(s);
-	std::cout << decode_text;
-
-	decode_input.close();
-	text_input.close();
-
+	std::cout << "Full huffman decoding time: " << t.elapsed() << '\n';
 }
 
 
-void canonical_test()
+void war_and_peace_naive_encode(const std::string& filename)
 {
-	std::ofstream huffman_out("huffman_decoder.txt");
-	std::vector<int> arr = { 'a',	'b',	'c',	'd',	'e',	'f' };
-	std::vector<int> freq = { 5,	9,		12,		13,		16,		45 };
+	Timer t;
 
-	Huffman huffmanTree(arr, freq, true);
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
 
-	std::vector<std::pair<int, std::string>> code = huffmanTree.get_code();
-	std::vector<std::pair<int, std::string>> decode_pairs;
-	std::pair<std::vector<std::pair<int,int>>, std::vector<std::pair<int,std::string>>> canon_out = canonical_huffman(code);
-	decode_pairs = canon_out.second;
+	std::wstring text = readFile(filename);
+	std::wofstream out("test/naive/war_and_peace_codes.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read naive encoding time: " << t_read->elapsed() << '\n';
+	t_read.reset(); // Run destructor
+
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	// Build Naive
+	NaiveSolve<wchar_t> naive_solve(text);
+	std::cout << "Build naive encoding time: " << t_build->elapsed() << '\n';
+	t_build.reset(); // Run desctructor
+
+	std::unique_ptr<Timer> t_solve = std::make_unique<Timer>();
+	std::wstring answ = naive_solve.solve();
+	std::cout << "Solve naive encoding time: " << t_solve->elapsed() << '\n';
+	t_solve.reset(); // Run destructor
+
+	std::unique_ptr<Timer> t_out = std::make_unique<Timer>();
+	std::pair<std::vector<int>, std::vector<std::wstring>> code = naive_solve.getDecoder();
+	std::vector<int> symbols = code.first;
+	std::vector<std::wstring> encodes = code.second;
+	
+	const int n = (int)symbols.size();
+	std::map<int, std::wstring> codes;
+	int i{};
+	for (; i < n; ++i)
+		codes[symbols[i]] = encodes[i];
+
+	for (auto& [symb, str] : codes)
+		out << symb << L": " << str << L'\n';
+
+	out.close();
+	std::cout << "Out naive encoding time: " << t_out->elapsed() << '\n';
+	t_out.reset(); // Run destructor
+	
+
+	// Try to encode with the table
+	std::wofstream encode_message("test/naive/war_and_peace_encode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
+	std::unique_ptr<Timer> t_encode = std::make_unique<Timer>();
+	encode_message << answ;
+	std::cout << "Encode naive encoding time: " << t_encode->elapsed() << '\n';
+
+	out.close();
+
+	std::cout << "Full naive encoding time: " << t.elapsed() << '\n';
+
+	// get freq
+	std::map<wchar_t, int> mp;
+	for (auto& it : text)
+		mp[it]++;
+
+	long double average_len = 0.0l;
+	long long summary = 0;
+	for (auto& [key, val] : mp)
+		summary += val;
+
+	for (auto& [key, val] : codes)
+		average_len += (long double)val.size() * mp[key] / summary;
+	std::cout << std::fixed << "avg len: " << average_len << '\n';
+}
 
 
-	for (auto& [symbol, encode] : decode_pairs)						// write table to huffman_decoder.txt
-		huffman_out << symbol << " : " << encode << '\n';
+void war_and_peace_naive_decode()
+{
+	Timer t;
 
-	huffman_out.close();
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
 
-	std::ofstream canon_test("canonical_test.txt");
-	for (auto& [symbol, encode] : canon_out.first)
-		canon_test << symbol << ' ' << encode << '\n';
-	canon_test.close();
+	std::string filename = "test/naive/war_and_peace_encode.txt";
+	std::wstring text = readFile(filename);
+	std::wifstream in("test/naive/war_and_peace_codes.txt");
+	in.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read naive decoding: " << t_read->elapsed() << '\n';
+	t_read.reset(); // Run destructor
+
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	NaiveDecoder<wchar_t> huffman_decoder(in);
+	std::cout << "Build naive decoding: " << t_build->elapsed() << '\n';
+	t_build.reset(); // Run destructor
+	in.close();
+
+	std::wofstream out("test/naive/war_and_peace_decode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	
+	std::unique_ptr<Timer> t_solve = std::make_unique<Timer>();
+	std::wstring total = huffman_decoder.decode_text(text);
+	std::cout << "Solve naive decoding: " << t_solve->elapsed() << '\n';
+	t_solve.reset(); // Run destructor
+	
+	std::unique_ptr<Timer> t_out = std::make_unique<Timer>();
+	out << total;
+	out.close();
+	std::cout << "Out naive decoding: " << t_out->elapsed() << '\n';
+	t_out.reset(); // Run destructor
+
+	std::cout << "Full naive decoding time: " << t.elapsed() << '\n';
+}
 
 
-	std::ifstream input("canonical_test.txt");
+void war_and_peace_canonical_encode(const std::string& filename)
+{
+	std::wstring text = readFile(filename);
+	std::wofstream out("test/canonical/war_and_peace_codes.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
 
-	CanonicalHuffmanDecoder canonical_decoder(input);
-	std::string s = "111111100111111100";	// this is message
-	std::string answ = canonical_decoder.solve(s);
-	std::cout << answ;
+	Timer t;
+	// get freq
+	std::map<wchar_t, int> mp;
+	std::vector<int> symb, freq;
+	for (auto& it : text)
+		mp[it]++;
 
+	for (auto& [key, val] : mp)
+	{
+		symb.push_back(key);
+		freq.push_back(val);
+	}
+
+	// Build Huffman
+	Huffman huffman_tree(symb, freq);
+	std::vector<std::pair<int, std::wstring>> code = huffman_tree.get_code<wchar_t>();
+
+	CanonicalHuffman canonical_huffman(code);
+	std::pair<std::vector<std::pair<int, int>>, std::vector<std::pair<int, std::wstring>>> canon_out = canonical_huffman.solve();
+	std::vector<std::pair<int, int>> codes = canon_out.first;
+	std::vector<std::pair<int, std::wstring>>& canon_out_sec = canon_out.second;
+
+	std::map<int, std::wstring> str_codes(canon_out_sec.begin(), canon_out_sec.end());
+
+
+	for (auto& [symb, code] : codes)
+		out << symb << " " << code << '\n';
+
+	out.close();
+
+	// Try to encode with the table
+	std::wofstream encode_message("test/canonical/war_and_peace_encode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	for (auto& it : text)
+		encode_message << str_codes[it];
+
+	out.close();
+
+	std::cout << "Encoding time: " << t.elapsed() << '\n';
+}
+
+
+void war_and_peace_canonical_decode()
+{
+	Timer t;
+	
+	std::string filename = "test/canonical/war_and_peace_encode.txt";
+	std::wstring text = readFile(filename);
+	std::wifstream in("test/canonical/war_and_peace_codes.txt");
+	in.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
+	CanonicalHuffmanDecoder<wchar_t> canonical_huffman_decoder(in);
+	in.close();
+
+	std::wofstream out("test/canonical/war_and_peace_decode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::wstring total = canonical_huffman_decoder.solve(text);
+	out << total;
+	out.close();
+
+	std::cout << "Full canonical decoding time: " << t.elapsed() << '\n';
+}
+
+
+void check_similarity(const std::string& filename1, const std::string& filename2)
+{
+	std::wstring text1 = readFile(filename1);
+	std::wstring text2 = readFile(filename2);
+	// Проверим что исходное сообщение совпдает с декодированным сообщением
+
+	if (text1 == text2)
+		std::cout << "SIMILAR\n";
+	else
+		std::cout << "NO SIMILAR\n";
+}
+
+void fixed_war_and_peace_huffman_encode()
+{
+	Timer t;
+
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
+
+	std::wstring text = readFile("test/fixed_war_and_peace.txt");
+	std::wofstream out("test/huffman/fixed_war_and_peace_codes.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read huffman encoding time: " << t_read->elapsed() << '\n';
+	t_read.reset(); // Run destructor
+
+	std::unique_ptr<Timer> t_prebuild = std::make_unique<Timer>();
+
+	// get freq
+	std::map<wchar_t, int> mp;
+	for (auto& it : text)
+		mp[it]++;
+
+	std::vector<int> symb = { 32,1086,1077,1072,1080,1090,1085,1089,1088,1074,1083,1082,
+		1084,1076,1087,1091,1103,1099,1100,1075,1079,46,44,1073,1095,1081,1054,1093,10,
+		1078,1045,1040,1096,1048,1058,1102,1053,1057,1094,1056,1042,1051,1097,1050,1052,
+		1101,33,63,1044,1055,1059,1092,1071,59,58,1067,1068,1043,1047,1041,1063,1049,
+		1061,45,8212,40,41,91,93,123,125,171,187,39,34,1046,1064,1070,8230,1062,
+		1098,1065,1069,1060,1105,1066,1025 };
+
+	std::vector<int> freq = { 100,99,98,97,96,95,94,93,92,91,90,89,88,87,86,85,84,83,82,
+		81,80,79,78,77,76,75,74,73,72,71,70,69,68,67,66,65,64,63,62,61,60,59,58,57,56,
+		55,54,53,52,51,50,49,48,47,46,45,44,43,42,41,40,39,38,37,36,35,34,33,32,31,30,
+		29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14 };
+
+
+	std::cout << "Prebuild huffman encoding time: " << t_prebuild->elapsed() << '\n';
+	t_prebuild.reset();
+
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	// Build Huffman
+	Huffman huffman_tree(symb, freq);
+	std::cout << "Build huffman encoding time: " << t_build->elapsed() << '\n';
+	t_build.reset();
+
+	std::unique_ptr<Timer> t_out = std::make_unique<Timer>();
+	std::vector<std::pair<int, std::wstring>> code = huffman_tree.get_code<wchar_t>();
+
+	std::map<int, std::wstring> codes(code.begin(), code.end());
+	for (auto& [symb, str] : code)
+		out << symb << L": " << str << L'\n';
+
+	out.close();
+	std::cout << "Out huffman encoding time: " << t_out->elapsed() << '\n';
+	t_out.reset();
+
+	// Try to encode with the table
+	std::wofstream encode_message("test/huffman/fixed_war_and_peace_encode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
+	std::unique_ptr<Timer> t_encode = std::make_unique<Timer>();
+
+	for (auto& it : text)
+		encode_message << codes[it];
+	std::cout << "Encode huffman encoding time: " << t_encode->elapsed() << '\n';
+	out.close();
+	std::cout << "Full Encoding time: " << t.elapsed() << '\n';
+
+	long double average_len = 0.0l;
+	long long summary = 0;
+	for (auto& [key, val] : mp)
+		summary += val;
+
+	for (auto& [key, val] : codes)
+		average_len += (long double)val.size() * mp[key] / summary;
+	std::cout << std::fixed << "avg len: " << average_len << '\n';
+}
+
+void fixed_war_and_peace_huffman_decode()
+{
+	Timer t;
+
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
+
+	std::string filename = "test/huffman/fixed_war_and_peace_encode.txt";
+	std::wstring text = readFile(filename);
+	std::wifstream in("test/huffman/fixed_war_and_peace_codes.txt");
+	in.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read huffman decoding time: " << t_read->elapsed() << '\n';
+	t_read.reset();
+
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	HuffmanDecoder<wchar_t> huffman_decoder(in);
+	std::cout << "Build huffman decoding time: " << t_build->elapsed() << '\n';
+	t_build.reset();
+
+	in.close();
+
+	std::wofstream out("test/huffman/fixed_war_and_peace_decode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
+	std::unique_ptr<Timer> t_decode = std::make_unique<Timer>();
+	std::wstring total = huffman_decoder.decode(text);
+	std::cout << "Decode huffman decoding time: " << t_decode->elapsed() << '\n';
+
+	out << total;
+	out.close();
+
+	std::cout << "Full huffman decoding time: " << t.elapsed() << '\n';
+}
+
+
+void fixed_war_and_peace_naive_encode()
+{
+	Timer t;
+	
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
+	
+	std::string filename("test/fixed_war_and_peace.txt");
+	std::wstring text = readFile(filename);
+	std::wofstream out("test/naive/fixed_war_and_peace_codes.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read naive encoding time: " << t_read->elapsed() << '\n';
+	t_read.reset(); // Run destructor
+
+
+	// get freq
+	std::map<wchar_t, int> mp;
+	for (auto& it : text)
+		mp[it]++;
+
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	// Build Naive
+	NaiveSolve<wchar_t> naive_solve(text);
+	std::cout << "Build naive encoding time: " << t_build->elapsed() << '\n';
+	t_build.reset(); // Run desctructor
+
+	std::unique_ptr<Timer> t_solve = std::make_unique<Timer>();
+	std::wstring answ = naive_solve.solve();
+	std::cout << "Solve naive encoding time: " << t_solve->elapsed() << '\n';
+	t_solve.reset(); // Run destructor
+
+	std::unique_ptr<Timer> t_out = std::make_unique<Timer>();
+	std::pair<std::vector<int>, std::vector<std::wstring>> code = naive_solve.getDecoder();
+	std::vector<int> symbols = code.first;
+	std::vector<std::wstring> encodes = code.second;
+
+	const int n = (int)symbols.size();
+	std::map<int, std::wstring> codes;
+	int i{};
+	for (; i < n; ++i)
+		codes[symbols[i]] = encodes[i];
+
+	for (auto& [symb, str] : codes)
+		out << symb << L": " << str << L'\n';
+
+	out.close();
+	std::cout << "Out naive encoding time: " << t_out->elapsed() << '\n';
+	t_out.reset(); // Run destructor
+
+
+	// Try to encode with the table
+	std::wofstream encode_message("test/naive/fixed_war_and_peace_encode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
+	std::unique_ptr<Timer> t_encode = std::make_unique<Timer>();
+	encode_message << answ;
+	std::cout << "Encode naive encoding time: " << t_encode->elapsed() << '\n';
+
+	out.close();
+
+	std::cout << "Full naive encoding time: " << t.elapsed() << '\n';
+
+	long double average_len = 0.0l;
+	long long summary = 0;
+	for (auto& [key, val] : mp)
+		summary += val;
+
+	for (auto& [key, val] : codes)
+		average_len += (long double)val.size() * mp[key] / summary;
+	std::cout << std::fixed << "avg len: " << average_len << '\n';
+}
+
+
+void fixed_war_and_peace_naive_decode()
+{
+	Timer t;
+
+	std::unique_ptr<Timer> t_read = std::make_unique<Timer>();
+
+	std::string filename = "test/naive/fixed_war_and_peace_encode.txt";
+	std::wstring text = readFile(filename);
+	std::wifstream in("test/naive/fixed_war_and_peace_codes.txt");
+	in.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+	std::cout << "Read naive decoding: " << t_read->elapsed() << '\n';
+	t_read.reset(); // Run destructor
+
+	std::unique_ptr<Timer> t_build = std::make_unique<Timer>();
+	NaiveDecoder<wchar_t> huffman_decoder(in);
+	std::cout << "Build naive decoding: " << t_build->elapsed() << '\n';
+	t_build.reset(); // Run destructor
+	in.close();
+
+	std::wofstream out("test/naive/fixed_war_and_peace_decode.txt");
+	out.imbue(std::locale(std::locale::empty(), new std::codecvt_utf8<wchar_t>));
+
+	std::unique_ptr<Timer> t_solve = std::make_unique<Timer>();
+	std::wstring total = huffman_decoder.decode_text(text);
+	std::cout << "Solve naive decoding: " << t_solve->elapsed() << '\n';
+	t_solve.reset(); // Run destructor 
+
+	std::unique_ptr<Timer> t_out = std::make_unique<Timer>();
+	out << total;
+	out.close();
+	std::cout << "Out naive decoding: " << t_out->elapsed() << '\n';
+	t_out.reset(); // Run destructor
+
+	std::cout << "Full naive decoding time: " << t.elapsed() << '\n';
 }
 
 
 int main()
 {
+	std::cin.tie(0);
+	std::ios_base::sync_with_stdio(false);
 
-	//tests();
-	//baftest();
-	//naive();
-	canonical_test();
+	std::vector<std::string> test_inputs = { "test/test1.txt", "test/test2.txt", "test/test3.txt" };
+	std::vector<std::string> test_outputs = { "test/test1_answ.txt", "test/test2_answ.txt", "test/test3_answ.txt" };
+
+	Tests<wchar_t> tests(test_inputs, test_outputs);
+	tests.do_all_tests();
+
+	int32_t t{ 5 };
+	std::string filename = "test/war_and_peace.txt";
+
+	if (t == 1) {
+		war_and_peace_huffman_encode(filename);
+		war_and_peace_huffman_decode();
+		check_similarity(filename, "test/huffman/war_and_peace_decode.txt");
+	}
+	else if (t == 2)
+	{
+		war_and_peace_naive_encode(filename);
+		war_and_peace_naive_decode();
+		check_similarity(filename, "test/naive/war_and_peace_decode.txt");
+	}
+	else if (t == 3)
+	{
+		war_and_peace_canonical_encode(filename);
+		war_and_peace_canonical_decode();
+		check_similarity(filename, "test/canonical/war_and_peace_decode.txt");
+	}
+	else if (t == 4)
+	{
+		fixed_war_and_peace_huffman_encode();
+		fixed_war_and_peace_huffman_decode();
+		check_similarity("test/fixed_war_and_peace.txt", "test/huffman/fixed_war_and_peace_decode.txt");
+	}
+	else if (t == 5)
+	{
+		fixed_war_and_peace_naive_encode();
+		fixed_war_and_peace_naive_decode();
+		check_similarity("test/fixed_war_and_peace.txt", "test/naive/fixed_war_and_peace_decode.txt");
+	}
 
 	return  0;
 }

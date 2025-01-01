@@ -49,14 +49,11 @@ int mark_points(vvvi& visit, const int fx, const int fy)
         if (visit[fx][fy][i] == start_dist)
             q.push(make_tuple(start_dist, i, fx, fy));
 
-    vvvi mvisit(n, vvi(m, vi(4)));
     while (!q.empty())
     {
         auto [dist, dir, row, col] = q.front();
         q.pop();
 
-        if (mvisit[row][col][dir])
-            continue;
         good.insert(make_pair(row, col));
         
         if (visit[row + N[dir][0]][col + N[dir][1]][dir] == dist - 1)

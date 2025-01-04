@@ -15,6 +15,8 @@ using vi = vector<int>;
 using vvi = vector<vi>;
 using vvvi = vector<vvi>;
 
+using vpii = vector<pair<int,int>>;
+
 int get_bit(const ll& x, ll index)
 {
     return (x >> index) & 1;
@@ -23,8 +25,6 @@ int get_bit(const ll& x, ll index)
 
 void solve()
 {
-    // run on release
-    
     // Решение задачи:
     // Поскольку ответ число порядка 8^16 = 2^48, то переберём сначала первые 24 бит, а потом к ним будем перебирать вторые 24 бит
 
@@ -89,11 +89,12 @@ void solve()
             }
         }
         // суффикс совпадает, один из кандидатов на первые 24 бит это mask
-        if (ok) 
+        if (ok)
             good.push_back(mask);
-        
+
     }
     
+
     // very_good это ответ
     vector<ll> very_good;
     for (auto& it : good)
@@ -103,10 +104,10 @@ void solve()
         {
             answ.clear();
             int  mask_size = 1;
-            for(int i = 0;i<22;++i)
+            for (int i = 0; i < 25; ++i)
                 if (get_bit(mask, i))
                     mask_size = i + 1;
-                
+
             A = (it << mask_size) | mask;
             ll buff = A;
             while (A)
@@ -122,7 +123,7 @@ void solve()
                 continue;
 
             bool ok = true;
-            for (int j = isz(answ) - 1, k = isz(need) - 1; k >=0 && j >= 0; --j, --k)
+            for (int j = isz(answ) - 1, k = isz(need) - 1; k >= 0 && j >= 0; --j, --k)
             {
                 if (answ[j] != need[k])
                 {
@@ -131,7 +132,6 @@ void solve()
                 }
             }
             if (ok) {
-                good.push_back(buff);
                 // Если размер совпал, то это ответы
                 if (isz(answ) == isz(need))
                     very_good.push_back((it << mask_size) | mask);

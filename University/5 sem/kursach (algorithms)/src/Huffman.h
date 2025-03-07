@@ -5,7 +5,7 @@
 #include <utility>
 #include <string>
 #include <type_traits>
-#include<tuple>
+#include <tuple>
 
 
 class Huffman

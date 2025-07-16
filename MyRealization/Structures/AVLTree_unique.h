@@ -1,9 +1,22 @@
+#pragma once
+
 #include <algorithm>	// for std::swap, std::max
 #include <cstddef>		// for std::size_t
 #include <optional>		// for std::optional
 #include <memory>		// for std::unique_ptr, strd::make_unique
 #include <utility>		// for std::move, std:forward
 
+
+/*====================================================================
+This is AVLTree realization with std::unique_ptr. Only keys, no values. 
+To use it with template, Key must have:
+1. operator ==
+2. operator <
+3. operator =
+=====================================================================*/
+
+
+// AVLTree's node
 template<typename Key>
 class AVLNode {
 public:
@@ -24,33 +37,36 @@ public:
 };
 
 
+// AVLTree class
 template<typename Key>
 class AVLTree {
 private:
 
+	// Root node
 	std::unique_ptr<AVLNode<Key>> root_; 
+	// Population size
 	std::size_t cnt_;
 
-	// OK
+	// Return valid height of the node
 	static int n_h_(const std::unique_ptr<AVLNode<Key>>& n) noexcept
 	{
 		return (n == nullptr ? 0 : n->height);
 	}
 
-	// OK
+	// Update height of the node
 	static void update_h_(const std::unique_ptr<AVLNode<Key>>& n) noexcept
 	{
 		n->height = 1 + std::max(n_h_(n->left), n_h_(n->right));
 	}
 
-	// OK
+	// Return valid balance of the node
 	static int n_b_(const std::unique_ptr<AVLNode<Key>>& n) noexcept
 	{
 		if (!n) return 0;
 		return n_h_(n->left) - n_h_(n->right);
 	}
 
-	// OK
+	// Right rotation
 	std::unique_ptr<AVLNode<Key>> r_rot_(std::unique_ptr<AVLNode<Key>> n) noexcept
 	{
 		std::unique_ptr<AVLNode<Key>> nl = std::move(n->left);
@@ -64,7 +80,7 @@ private:
 		return nl;
 	}
 
-	// OK
+	// Left rotation
 	std::unique_ptr<AVLNode<Key>> l_rot_(std::unique_ptr<AVLNode<Key>> n) noexcept
 	{
 		std::unique_ptr<AVLNode<Key>> nr = std::move(n->right);
@@ -78,7 +94,7 @@ private:
 		return nr;
 	}
 
-	// OK
+	// Balance node
 	std::unique_ptr<AVLNode<Key>> balance_n_(std::unique_ptr<AVLNode<Key>> n)
 	{
 		update_h_(n);
@@ -96,21 +112,21 @@ private:
 		return n;
 	}
 	
-	// OK
+	// Return ptr to min value in subtree
 	const AVLNode<Key>* min_v_(const AVLNode<Key>* n) const noexcept
 	{
 		while (n->left) n = n->left.get();
 		return n;
 	}
 
-	// OK
+	// Return ptr to max value in subtree
 	const AVLNode<Key>* max_v_(const AVLNode<Key>* n) const noexcept
 	{
 		while (n->right) n = n->right.get();
 		return n;
 	}
 
-	// OK
+	// Insert key method
 	template<typename T>
 	std::unique_ptr<AVLNode<Key>> ins_key_(std::unique_ptr<AVLNode<Key>> n, T&& key)
 	{
@@ -118,25 +134,25 @@ private:
 			++cnt_;
 			return std::make_unique<AVLNode<Key>>(std::forward<T>(key));
 		}
-		if (n->key > key)
-			n->left = ins_key_(std::move(n->left), std::forward<T>(key));
-		else if (n->key < key)
+		if (n->key < key)
 			n->right = ins_key_(std::move(n->right), std::forward<T>(key));
-		else
+		else if (n->key == key)
 			return n;
+		else
+			n->left = ins_key_(std::move(n->left), std::forward<T>(key));
 
 		return balance_n_(std::move(n));
 	}
 
-	// OK
+	// Delete key method
 	template<typename T>
 	std::unique_ptr<AVLNode<Key>>del_k_(std::unique_ptr<AVLNode<Key>> n, T&& key)
 	{
 		if (!n) return n;
 
-		if (n->key > key)		n->left =  del_k_(std::move(n->left), std::forward<T>(key));
-		else if (n->key < key)	n->right =  del_k_(std::move(n->right), std::forward<T>(key));
-		else {
+		if (n->key < key)		
+			n->right =  del_k_(std::move(n->right), std::forward<T>(key));
+		else if(n->key == key) {
 			if (n->left == nullptr || n->right == nullptr) {
 				std::unique_ptr<AVLNode<Key>> tmp = (n->left == nullptr ? std::move(n->right) : std::move(n->left));
 				--cnt_;
@@ -149,34 +165,35 @@ private:
 			}
 
 		}
+		else n->left =  del_k_(std::move(n->left), std::forward<T>(key));
 
 		return balance_n_(std::move(n));
 	}
 
-	// OK
+	// Find key method
 	bool find_k_(const Key& key) const noexcept
 	{
 		AVLNode<Key>* curr = root_.get();
 		while (curr) {
-			if (curr->key > key)		curr = curr->left.get();
-			else if (curr->key < key)	curr = curr->right.get();
-			else return true;
+			if (curr->key < key)		curr = curr->right.get();
+			else if (curr->key == key)	return true;
+			else curr = curr->left.get();
 		}
 		return false;
 	}
 
-	// OK
+	// Compare trees method
 	static bool is_eq_(const std::unique_ptr<AVLNode<Key>>& a, const std::unique_ptr<AVLNode<Key>>& b) noexcept
 	{
 		if (a == b) return true;
 		if (!a || !b) return false;
 
-		if (a->key != b->key || a->height != b->height)
+		if (!(a->key == b->key && a->height == b->height))
 			return false;
 		return is_eq_(a->left, b->left) && is_eq_(a->right, b->right);
 	}
 
-	// OK
+	// Copy tree method
 	static std::unique_ptr<AVLNode<Key>> copy_n_(const std::unique_ptr<AVLNode<Key>>& n)
 	{
 		if (!n) return nullptr;
@@ -192,19 +209,19 @@ private:
 
 public:
 
-	// OK
+	// Basic constructor
 	AVLTree()
 		: root_(nullptr)
 		, cnt_(0)
 	{ }
 
-	// OK
+	// Deep-copy constructor
 	AVLTree(const AVLTree& tree)
 		: root_(copy_n_(tree.root_))
 		, cnt_(tree.cnt_)
 	{ }
 
-	// OK
+	// Move-constructor
 	AVLTree(AVLTree&& tree) 
 		: root_(std::move(tree.root_))
 		, cnt_(tree.cnt_)
@@ -212,7 +229,7 @@ public:
 		tree.cnt_ = 0;
 	}
 
-	// OK
+	// Operator =
 	AVLTree& operator=(const AVLTree& other)
 	{
 		if (this != &other) {
@@ -222,7 +239,7 @@ public:
 		return *this;
 	}
 
-	// OK
+	// move operator = 
 	AVLTree& operator=(AVLTree&& other)
 	{
 		if (this != &other) {
@@ -235,27 +252,27 @@ public:
 		return *this;
 	}
 
-	// OK
+	// Swap trees method
 	void swap(AVLTree& other) noexcept 
 	{
 		std::swap(root_, other.root_);
 		std::swap(cnt_, other.cnt_);
 	}
 
-	// OK
+	// Operator ==
 	bool operator==(const AVLTree& tree) const noexcept
 	{
 		if (cnt_ != tree.cnt_) return false;
 		return is_eq_(root_, tree.root_);
 	}
 
-	// OK
+	// Operator !=
 	bool operator !=(const AVLTree& tree) const noexcept
 	{
 		return !(*this == tree);
 	}
 
-	// OK
+	// Insert key in tree. Return true if successfull, false if key was already exists
 	template<typename T>
 	bool insert(T&& key)
 	{
@@ -264,7 +281,7 @@ public:
 		return old_cnt != cnt_;
 	}
 
-	// OK
+	// Remove key from tree. Return true if successfull, false if key doesn't exists
 	template<typename T>
 	bool remove(T&& key)
 	{
@@ -273,50 +290,50 @@ public:
 		return old_cnt != cnt_;
 	}
 	
-	// OK
+	// Return size of the tree
 	std::size_t size() const noexcept
 	{
 		return cnt_;
 	}
 
-	// OK
+	// Return height of the tree
 	int height() const noexcept
 	{
 		return n_h_(root_);
 	}
 
-	// OK
+	// Return max in the tree (std::nullopt if tree is empty)
 	std::optional<Key> max_opt() const noexcept
 	{
 		return is_empty() ? std::nullopt : std::optional<Key>(max_v_(root_.get())->key);
 	}
 
-	// OK
+	// Return min in the tree (std::nullopt if tree is empty)
 	std::optional<Key> min_opt() const noexcept
 	{
 		return is_empty() ? std::nullopt : std::optional<Key>(min_v_(root_.get())->key);
 	}
 
-	// OK
+	// Return true if tree is empty
 	bool is_empty() const noexcept
 	{
 		return root_ == nullptr;
 	}
 
-	// OK
+	// Return true if tree contains key
 	bool contains(const Key& key) const noexcept
 	{
 		return find_k_(key);
 	}
 
-	// OK
+	// Clear method
 	void clear() noexcept
 	{
 		root_.reset();
 		cnt_ = 0;
 	}
 
-	// OK
+	// Basic destructor (no need realization, we have std::unique_ptr)
 	~AVLTree() noexcept = default;
 
 };

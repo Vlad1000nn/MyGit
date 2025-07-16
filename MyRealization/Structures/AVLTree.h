@@ -4,6 +4,17 @@
 #include <cstddef>		// for std::size_t
 #include <optional>		// for std::optional
 
+
+/*====================================================================
+This is AVLTree realization with basic pointers. Only keys, no values.
+To use it with template, Key must have:
+1. operator ==
+2. operator <
+3. operator =
+=====================================================================*/
+
+
+// AVLTree's node
 template<typename Key>
 class AVLNode {
 public:
@@ -17,41 +28,42 @@ public:
 		, height(1)
 		, left(nullptr)
 		, right(nullptr)
-	{
-	}
+	{ }
 
 	~AVLNode() noexcept = default;
 
 };
 
-
+// AVLTree class
 template<typename Key>
 class AVLTree {
 private:
 
+	// Root node
 	AVLNode<Key>* root_;
+	// Population size
 	std::size_t cnt_;
 
-	// OK
+	// Return valid height of the node
 	static int n_h_(AVLNode<Key>* n) noexcept
 	{
 		return (n == nullptr ? 0 : n->height);
 	}
 
-	// OK
+	// Update height of the node
 	static void update_h_(AVLNode<Key>* n) noexcept
 	{
 		n->height = 1 + std::max(n_h_(n->left), n_h_(n->right));
 	}
 
-	// OK
+	// Return valid balance of the node
 	static int n_b_(AVLNode<Key>* n) noexcept
 	{
 		if (!n) return 0;
 		return n_h_(n->left) - n_h_(n->right);
 	}
 
-	// OK
+	// Right rotation
 	AVLNode<Key>* r_rot_(AVLNode<Key>* n) noexcept
 	{
 		AVLNode<Key>* nl = n->left;
@@ -66,7 +78,7 @@ private:
 		return nl;
 	}
 
-	// OK
+	// Left rotation
 	AVLNode<Key>* l_rot_(AVLNode<Key>* n) noexcept
 	{
 		AVLNode<Key>* nr = n->right;
@@ -81,10 +93,11 @@ private:
 		return nr;
 	}
 
-	// OK
+	// Balance node
 	AVLNode<Key>* balance_n_(AVLNode<Key>* n)
 	{
 		update_h_(n);
+
 		int nb = n_b_(n);
 		if (nb == 2) {
 			if (n_b_(n->left) == -1) n->left = l_rot_(n->left);
@@ -98,45 +111,45 @@ private:
 		return n;
 	}
 
-	// OK
-	AVLNode<Key>* min_v_(AVLNode<Key>* n) const noexcept
+	// Return ptr to min value in subtree
+	const AVLNode<Key>* min_v_(const AVLNode<Key>* n) const noexcept
 	{
 		while (n->left) n = n->left;
 		return n;
 	}
 
-	// OK
-	AVLNode<Key>* max_v_(AVLNode<Key>* n) const noexcept
+	// Return ptr to max value in subtree
+	const AVLNode<Key>* max_v_(const AVLNode<Key>* n) const noexcept
 	{
 		while (n->right) n = n->right;
 		return n;
 	}
 
-	// OK
+	// Insert key method
 	AVLNode<Key>* ins_key_(AVLNode<Key>* n, const Key& key)
 	{
 		if (!n) {
 			++cnt_;
 			return new AVLNode<Key>(key);
 		}
-		if (n->key > key)
-			n->left = ins_key_(n->left, key);
-		else if (n->key < key)
+		if (n->key < key)
 			n->right = ins_key_(n->right, key);
-		else
+		else if (n->key == key)
 			return n;
+		else
+			n->left = ins_key_(n->left, key);
 
 		return balance_n_(n);
 	}
 
-	// OK
+	// Delete key method
 	AVLNode<Key>* del_k_(AVLNode<Key>* n, const Key& key)
 	{
 		if (!n) return n;
 
-		if (n->key > key)		n->left = del_k_(n->left, key);
-		else if (n->key < key)	n->right = del_k_(n->right, key);
-		else {
+		if (n->key < key)		
+			n->right = del_k_(n->right, key);
+		else if (n->key == key)	{
 			if (n->left == nullptr || n->right == nullptr) {
 				AVLNode<Key>* tmp = (n->left == nullptr ? n->right : n->left);
 				delete n;
@@ -149,23 +162,24 @@ private:
 				n->right = del_k_(n->right, n->key);
 			}
 		}
+		else n->left = del_k_(n->left, key);
 
 		return balance_n_(n);
 	}
 
-	// OK
+	// Find key method
 	bool find_k_(const Key& key) const noexcept
 	{
 		AVLNode<Key>* curr = root_;
 		while (curr) {
-			if (curr->key > key)		curr = curr->left;
-			else if (curr->key < key)	curr = curr->right;
-			else return true;
+			if (curr->key < key)		curr = curr->right;
+			else if (curr->key == key)	return true;
+			else						curr = curr->left;
 		}
 		return false;
 	}
 
-	// OK
+	// Clear tree method
 	void clr_n_(AVLNode<Key>* n) noexcept
 	{
 		if (!n) return;
@@ -174,23 +188,46 @@ private:
 		delete n;
 	}
 
+	// Compare trees method
+	static bool is_eq_(const AVLNode<Key>* a, const AVLNode<Key>* b) noexcept
+	{
+		if (a == b) return true;
+		if (!a || !b) return false;
+
+		if (!(a->key == b->key && a->height != b->height))
+			return false;
+		return is_eq_(a->left, b->left) && is_eq_(a->right, b->right);
+	}
+
+	// Copy tree method
+	static AVLNode<Key>* copy_n_(AVLNode<Key>* n)
+	{
+		if (!n) return n;
+
+		AVLNode<Key>* res = new AVLNode<Key>(n->key);
+
+		res->height = n->height;
+		res->left = copy_n_(n->left);
+		res->right = copy_n_(n->right);
+
+		return res;
+	}
+
 public:
 
-	// OK
+	// Basic constructor
 	AVLTree()
 		: root_(nullptr)
 		, cnt_(0)
-	{
-	}
+	{ }
 
-	// OK
+	// Deep-copy constructor
 	AVLTree(const AVLTree& tree)
 		: root_(copy_n_(tree.root_))
 		, cnt_(tree.cnt_)
-	{
-	}
+	{ }
 
-	// OK
+	// Move-constructor
 	AVLTree(AVLTree&& tree) noexcept
 		: root_(tree.root_)
 		, cnt_(tree.cnt_)
@@ -199,7 +236,7 @@ public:
 		tree.cnt_ = 0;
 	}
 
-	// OK
+	// Operator =
 	AVLTree& operator=(const AVLTree& other)
 	{
 		if (this != &other) {
@@ -210,7 +247,7 @@ public:
 		return *this;
 	}
 
-	// OK
+	// move operator = 
 	AVLTree& operator=(AVLTree&& other) noexcept
 	{
 		if (this != &other) {
@@ -225,39 +262,14 @@ public:
 		return *this;
 	}
 
-	// OK
-	static bool is_eq_(const AVLNode<Key>* a, const AVLNode<Key>* b) noexcept
-	{
-		if (a == b) return true;
-		if (!a || !b) return false;
-
-		if (a->key != b->key || a->height != b->height)
-			return false;
-		return is_eq_(a->left, b->left) && is_eq_(a->right, b->right);
-	}
-
-	// OK
-	static AVLNode<Key>* copy_n_(AVLNode<Key>* n)
-	{
-		if (!n) return n;
-
-		AVLNode<Key>* res = new AVLNode<Key>(n->key);
-
-		res->height = n->height;
-		res->left = copy_n_(n->left);
-		res->right = copy_n_(n->right);
-
-		return res;
-	}
-
-	// OK
+	// Swap trees method
 	void swap(AVLTree& other) noexcept
 	{
 		std::swap(root_, other.root_);
 		std::swap(cnt_, other.cnt_);
 	}
 
-	// OK
+	// Operator ==
 	bool operator==(const AVLTree& tree) const noexcept
 	{
 		if (cnt_ != tree.cnt_) return false;
@@ -265,13 +277,13 @@ public:
 		return is_eq_(root_, tree.root_);
 	}
 
-	// OK
+	// Operator !=
 	bool operator !=(const AVLTree& tree) const noexcept
 	{
 		return !(*this == tree);
 	}
 
-	// OK
+	// Insert key in tree. Return true if successfull, false if key was already exists
 	bool insert(const Key& key)
 	{
 		std::size_t old_cnt = cnt_;
@@ -279,7 +291,7 @@ public:
 		return old_cnt != cnt_;
 	}
 
-	// OK
+	// Remove key from tree. Return true if successfull, false if key doesn't exists
 	bool remove(const Key& key)
 	{
 		std::size_t old_cnt = cnt_;
@@ -287,43 +299,43 @@ public:
 		return old_cnt != cnt_;
 	}
 
-	// OK
+	// Return size of the tree
 	std::size_t size() const noexcept
 	{
 		return cnt_;
 	}
 
-	// OK
+	// Return height of the tree
 	int height() const noexcept
 	{
 		return n_h_(root_);
 	}
 
-	// OK
+	// Return max in the tree (std::nullopt if tree is empty)
 	std::optional<Key> max_opt() const
 	{
 		return is_empty() ? std::nullopt : std::optional<Key>(max_v_(root_)->key);
 	}
 
-	// OK
+	// Return min in the tree (std::nullopt if tree is empty)
 	std::optional<Key> min_opt() const
 	{
 		return is_empty() ? std::nullopt : std::optional<Key>(min_v_(root_)->key);
 	}
 
-	// OK
+	// Return true if tree is empty
 	bool is_empty() const noexcept
 	{
 		return root_ == nullptr;
 	}
 
-	// OK
+	// Return true if tree contains key
 	bool contains(const Key& key) const noexcept
 	{
 		return find_k_(key);
 	}
 
-	// OK
+	// Clear method
 	void clear() noexcept
 	{
 		clr_n_(root_);
@@ -331,7 +343,7 @@ public:
 		cnt_ = 0;
 	}
 
-	// OK
+	// Basic destructor
 	~AVLTree() noexcept
 	{
 		clear();

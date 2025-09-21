@@ -1,3 +1,10 @@
+#include <vector>
+#include <iostream>
+using namespace std;
+
+using ll = long long;
+using vll = vector<ll>;
+using vvll = vector<vll>;
 
 const ll module = 998244353;
 

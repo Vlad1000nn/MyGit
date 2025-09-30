@@ -1,184 +1,122 @@
-#include <thread>		 // for std::thred
-#include <mutex>		 // for std::mutex
-#include <condition_variable> // for std::conditional_variable
-#include <queue>		 // for std::queue
-#include <vector>		 // for std::vector
-#include <functional>	 // for std::function
-#include <cstddef>		 // for std::size_t
-#include <atomic>		 // for std::atomic
-#include <utility>		 // for std::pair
-#include <unordered_set> // for std::unordered_set
-
-// main()
-#include <iostream> // for std::cout
-#include <chrono> // for std::chrono::milliseconds
+#include <thread>				// For std::thread
+#include <queue>				// For std::queue
+#include <functional>			// For std::functional, std::bind
+#include <mutex>				// For std::mutex, std::once_flag, std::call_once, std::unique_lock, std::lock_guard
+#include <condition_variable>	// For std::condition_variable
+#include <atomic>				// For std::atomic
+#include <cstddef>				// For std::size_t
+#include <future>				// For std::future, std::packaged_task
+#include <type_traits>			// For std::invoke_result
+#include <stdexcept>			// For std::runtime_error
+#include <memory>				// For std::shared_ptr, std::make_shared
+#include <utility>				// For std::forward
 
 
-// Реализация пула потоков, пока что умеет выполнять функции с сигнатурой void func();
-class ThreadPool {
+class ThreadPool 
+{
 private:
 
-	std::vector<std::thread> threads_;
+	std::vector<std::thread> workers_;
+	std::queue<std::function<void()>> tasks_;
 
-	std::queue <std::pair<std::function<void()>, uint32_t>> tasks_;
+	std::mutex q_mtx_;
+	std::condition_variable q_cv_;
 
-	// из минусов постоянный рост сета, нужно добавить ручной сброс (потому что автоматический может затереть
-	// необходимые для пользователя данные про завершённые таски)
-	// либо после wait_all() сделать очистку(что вполне логично, таски выполнены)
-	std::unordered_set<uint32_t> completed_tasks_;
-
-	std::condition_variable q_cv_; // cv для очереди тасок
-	std::condition_variable cv_wait_; // cv для ожидания выполнения тасок
-	std::atomic<std::size_t> active_tasks_; // количество активных тасок
-
-	std::mutex q_mtx_; // мьютекс на очередь тасок
-	std::mutex task_mtx_; // мьютекс на ожидание выполнения тасок
-	std::atomic<uint32_t> index_; // номер таски
-
-	bool should_stop;
-
+	std::atomic<bool> is_joined_;
+	std::once_flag join_flag_;
+	
+	// Worker-thread body
 	void do_work()
 	{
-		std::pair<std::function<void()>, uint32_t> current_task;
-		while (true) 
+		while (true)
 		{
-			std::unique_lock<std::mutex> lock(q_mtx_);
-			q_cv_.wait(lock, [this]() {return !tasks_.empty() || should_stop; }); // спим
-			if (should_stop)
-				break;
+			std::function<void()> current_task;
+			{
+				std::unique_lock<std::mutex> lock(q_mtx_);
 
-			current_task = tasks_.front(); // берём таску
-			tasks_.pop();
-			++active_tasks_;
-			lock.unlock(); // разлочили
+				q_cv_.wait(lock, [this]() {
+					return !tasks_.empty() || is_joined_;
+					});
 
-			current_task.first(); // делаем таску
-			completed_tasks_.insert(current_task.second);
-			--active_tasks_;
-			cv_wait_.notify_all();
+				if (is_joined_ && tasks_.empty())
+					return;
+
+				current_task = std::move(tasks_.front());
+				tasks_.pop();
+			}
+			current_task();
 		}
 	}
 
-	// Сброс выполненных тасок
-	void reset_tasks_()
+	// Adding task f(args...) and return std::future object
+	template<typename Func, typename... Args>
+	std::future<typename std::invoke_result<Func, Args...>::type> add_(Func&& f, Args&&... args)
 	{
-		index_ = 0;
-		completed_tasks_.clear();
+		if (is_joined_)
+			throw std::runtime_error("add_task on joined ThreadPool");
+
+		using ret_type = typename std::invoke_result<Func, Args...>::type;
+		using pack_task = std::packaged_task<ret_type()>;
+
+		std::shared_ptr<pack_task> task_ptr = std::make_shared<pack_task>(std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
+
+		std::future<ret_type> future = task_ptr->get_future();
+		{
+			std::lock_guard<std::mutex> lock(q_mtx_);
+			if (is_joined_)
+				throw std::runtime_error("add_task on joined ThreadPool");
+
+			tasks_.emplace([task_ptr]() { (*task_ptr)(); });
+		}
+
+		q_cv_.notify_one();
+
+		return future;
 	}
 
 public:
 
-	// Конструктор с указанием количества потоков(по умолчанию значение в hardware_concurrency())
-	// Либо лучше сделать по умолчанию 1, потому что hardware_concurrency() может вернуть 0
 	explicit ThreadPool(std::size_t num_threads = std::thread::hardware_concurrency())
-		: should_stop(false)
-		, active_tasks_(0)
-		, index_(0)
-
+		: is_joined_(false)
 	{
-		// создаём потоки
-		std::size_t i = 0;
+		num_threads = (num_threads < 1 ? 1 : num_threads);
+	
+		std::size_t i{};
 		for (; i < num_threads; ++i)
-			threads_.emplace_back(&ThreadPool::do_work, this); 
+			workers_.emplace_back(&ThreadPool::do_work, this);
 	}
 
-	/*
+	// Task with one-thread access
 	template<typename Func, typename... Args>
-	int add_task(Func&& func, Args&&... args) {
-
-		func(std::forward<Args>(args)...);
-	}
-	*/
-
-	// добавить таску(возвращается её номер)
-	uint32_t add_task(std::function<void()> task)
+	std::future<typename std::invoke_result<Func, Args...>::type> add_task(Func&& f, Args&& ...args)
 	{
-		uint32_t curr_index = index_++;
-		{
-			std::lock_guard<std::mutex> lock(q_mtx_);
-			tasks_.emplace(std::move(task), curr_index); // добавили в очередь таску
-		}
-		q_cv_.notify_one(); // будим поток
-
-		return curr_index;
+		return add_(std::forward<Func>(f), std::forward<Args>(args)...);
 	}
 
-	// Дождаться выполнения таски с индексом index
-	void wait(uint32_t index)
+	// Task with shared access
+	template<typename Func, typename... Args>
+	std::shared_future<typename std::invoke_result<Func, Args...>::type> add_task_shared(Func&& f, Args&& ...args)
 	{
-		std::unique_lock<std::mutex> lock(task_mtx_);
-		cv_wait_.wait(lock, [this, index] {
-			return completed_tasks_.find(index) != completed_tasks_.end();
-			});
+		std::future<typename std::invoke_result<Func, Args...>::type> future = add_(std::forward<Func>(f), std::forward<Args>(args)...);
+		return future.share();
 	}
 
-	// дождаться выполнения всех тасок
-	void wait_all()
+	// "close" threadpool. Can be called once
+	void join()
 	{
-		std::unique_lock<std::mutex> lock(q_mtx_);
-		cv_wait_.wait(lock, [this]() {
-			std::lock_guard<std::mutex> task_lock(task_mtx_);
-			return tasks_.empty() && active_tasks_ == 0 
-				&& completed_tasks_.size() == index_; // на всякий случай
-			});
-		// 	reset_tasks_();
-	}
+		std::call_once(join_flag_, [this]() {
+			is_joined_ = true;
+			q_cv_.notify_all();
 
-	// Возвращает true, если таска с индексом index УЖЕ выполнена (false в противном случае)
-	bool completed(uint32_t index)
-	{
-		std::lock_guard<std::mutex> lock(task_mtx_); // во избежания UB при наличии выполняемых тасок в данный момент
-		return completed_tasks_.find(index) != completed_tasks_.end();
-	}
-
-	// фактический деструктор, вызываем чтобы убить все потоки в пуле
-	void clear() 
-	{
-		should_stop = true;
-		q_cv_.notify_all();
-		const std::size_t n = threads_.size();
-		std::size_t i = 0;
-		for (; i < n; ++i)
-			if (threads_[i].joinable())
-				threads_[i].join();
+			for (std::thread& worker : workers_)
+				if (worker.joinable())
+					worker.join();
+		});
 	}
 
 	~ThreadPool()
 	{
-		clear();
+		join();
 	}
 
 };
-
-#include <vector>
-#include <numeric>
-#include <future>
-
-
-void task()
-{
-	std::cout << std::this_thread::get_id() << " started" << std::endl;
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-	std::cout << std::this_thread::get_id() << " ended" << std::endl;
-}
-
-
-
-int main() {
-
-	ThreadPool tpool(2);
-
-	tpool.wait(tpool.add_task(task));
-	tpool.add_task(task);
-	tpool.add_task(task);
-	tpool.add_task(task);
-	tpool.add_task(task);
-	tpool.add_task(task);
-	tpool.add_task(task);
-	task();
-	task();
-
-	tpool.wait_all();
-
-	return 0;
-}

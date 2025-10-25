@@ -76,8 +76,8 @@ void solve()
     if (n == 1) {
         cout << s << '\n'; return;
     }
-    for (; k * k <= n; ++k)
-        ;
+    while (k * (k - 1) / 2 <= n)
+        ++k;
     k = min(n, k);
 
     vvi pref_dp1(n + 1, vi(k + 1));
@@ -86,8 +86,9 @@ void solve()
     vvi dp1(n, vi(k + 1));
     vvi dp2(n, vi(k + 1));
 
-    for (int i = 0; i <= k; ++i)
-        dp1[0][i] = dp2[0][i] = 1;
+    for (int i = 1; i <= k; ++i)
+        dp1[i-1][i] = dp2[i-1][i] = 1;
+     
     pref_dp1[0][0] = pref_dp2[0][k] = 1;
     for (int i = 1; i <= k; ++i)
         pref_dp1[0][i] = pref_dp1[0][i - 1] + 1;
@@ -96,7 +97,7 @@ void solve()
 
     for (int i = 1; i <= n; ++i) {
         for (int j = 1; j <= k; ++j) {
-            if (i - j < 0) break;
+            if (i - j < 0) goto pref1_up;
 
             if (pref_dp1[i - j][j - 1]) {
                 dp1[i - 1][j] = 1;
@@ -106,41 +107,44 @@ void solve()
                 if (dp1[i - j - 1][k] == 1 && str_comp(s,i - j - k, i - j - 1, i - j, i - 1))
                     dp1[i - 1][j] = 1;
             }
+            pref1_up:
             pref_dp1[i][j] = pref_dp1[i][j - 1] + dp1[i - 1][j];
         }
     }
 
-    string s_rev = s;
-    reverse(all(s_rev));
-
+    // 142857
     for (int i = 1; i <= n; ++i) {
         for (int j = 1; j <= k; ++j) {
-            if (i - j < 0) break;
+            if (i - j < 0) goto pref2_up;
 
             if (pref_dp2[i - j][j - 1]) {
                 dp2[i - 1][j] = 1;
             }
             else if (i - 2 * j >= 0) {
                 int k = j;
-                if (dp2[i - j - 1][k] == 1 && str_comp(s_rev, i - j - k, i - j - 1, i - j, i - 1))
+                if (dp2[i - j - 1][k] == 1 && str_comp(s, n - i + j + k - 1, n - i + j, n - i + j - 1, n - i))
                     dp2[i - 1][j] = 1;
             }
+
+            pref2_up:
             pref_dp2[i][j] = pref_dp2[i][j - 1] + dp2[i - 1][j];
         }
     }
 
-
-    string ans = std::string(n + 1, '9');
+    string ans = std::string(n + 2, '9');
     for (int i = 0; i <= k; ++i)
         if (dp1[n - 1][i] && str_comp(s, n - i, n - 1, ans))
             ans = s.substr(n - i, i);
 
-    for (int i = 0; i <= k; ++i)
-        if (dp2[n - 1][i] && str_comp(s_rev, n - i, n - 1, ans))
-            ans = s_rev.substr(n - i, i);
+    for (int i = 0; i <= k; ++i) {
+        if (dp2[n - 1][i] && str_comp(s, 0, i - 1, ans))
+            ans = s.substr(0, i);
+    }
 
     cout << ans << '\n';
 }
+
+
 int32_t main()
 {
     cin.tie(0);

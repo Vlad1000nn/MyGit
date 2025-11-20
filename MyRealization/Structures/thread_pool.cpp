@@ -10,6 +10,7 @@
 #include <stdexcept>			// For std::runtime_error
 #include <memory>				// For std::shared_ptr, std::make_shared
 #include <utility>				// For std::forward
+#include <vector> 				// For std::vector
 
 
 class ThreadPool 

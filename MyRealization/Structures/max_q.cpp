@@ -17,10 +17,10 @@
 template<typename T>
 struct MaxQ {
 
-    stack<pair<T, T>> s1, s2;
+    std::stack<std::pair<T, T>> s1, s2;
 
     void add(const T& val) {
-        s1.empty() ? s1.push(make_pair(val, val)) : s1.push(make_pair(val, max(val, s1.top().second)));
+        s1.empty() ? s1.push(std::make_pair(val, val)) : s1.push(std::make_pair(val, max(val, s1.top().second)));
     }
 
     T pop() {
@@ -28,13 +28,13 @@ struct MaxQ {
             if (s1.empty()) return -1;
 
             T v = s1.top().first;
-            s2.push(make_pair(v, v));
+            s2.push(std::make_pair(v, v));
             s1.pop();
 
             while (!s1.empty()) {
                 T val = s1.top().first;
                 s1.pop();
-                s2.push(make_pair(val, max(val, s2.top().second)));
+                s2.push(std::make_pair(val, max(val, s2.top().second)));
             }
         }
         T res = s2.top().first;

@@ -90,6 +90,114 @@ struct SD {
 
 };
 
+class SegmentTree {
+private:
+
+    int size, neutral;
+    vi a, tree;
+    int start, end, x, v_res = 0;
+    int index, value;
+
+    void clear(int v)
+    {
+        tree[v] = neutral;
+    }
+
+    void merge(int target, int source) {
+        tree[target] = gcd(tree[target], tree[source]);
+    }
+
+    void update_vertex(int v, int vl, int vr)
+    {
+        clear(v);
+        merge(v, vl);
+        merge(v, vr);
+    }
+
+    void build_tree(int v, int left, int right) {
+        if (left + 1 == right) {
+            tree[v] = a[left];
+        }
+        else {
+            int mid = (left + right) >> 1;
+            int vl = (v << 1), vr = vl + 1;
+            build_tree(vl, left, mid);
+            build_tree(vr, mid, right);
+            update_vertex(v, vl, vr);
+        }
+    }
+
+    void get_tree(int v, int left, int right) {
+        if (tree[v] % x == 0 || tree[v_res] > 1) return; // Либо всё ок в вершине, либо уже ответ No
+        
+        if (start <= left && end >= right) {
+            if (left + 1 == right)
+                ++tree[v_res];
+            else {
+                int mid = (left + right) >> 1;
+                int vl = (v << 1), vr = vl + 1;
+                get_tree(vl, left, mid);
+                get_tree(vr, mid, right);
+            }
+        }
+        else {
+            int mid = (left + right) >> 1;
+            int vl = (v << 1), vr = vl + 1;
+            if (start < mid)
+                get_tree(vl, left, mid);
+            if (end > mid)
+                get_tree(vr, mid, right);
+        }
+    }
+
+    void update_tree(int v, int left, int right) {
+        if (left + 1 == right) {
+            tree[v] = value;
+        }
+        else {
+            int mid = (left + right) >> 1;
+            int vl = 2 * v, vr = vl + 1;
+            if (index < mid)
+                update_tree(vl, left, mid);
+            else
+                update_tree(vr, mid, right);
+            update_vertex(v, vl, vr);
+        }
+    }
+
+
+public:
+
+    SegmentTree(int n, int neutral)
+        : neutral(neutral)
+        , size(n)
+        , tree(size << 2, SegmentTree::neutral)
+    {  }
+
+    void build(const vi& vec) {
+        a = vec;
+        build_tree(1, 0, size);
+    }
+
+    int get(int start, int end, int x) {
+        SegmentTree::start = start;
+        SegmentTree::end = end + 1;
+        SegmentTree::x = x;
+
+        clear(v_res);
+        get_tree(1, 0, size);
+
+        return (tree[v_res] < 2);
+    }
+
+
+    void update(int index, int value) {
+        SegmentTree::index = index;
+        SegmentTree::value = value;
+        update_tree(1, 0, size);
+    }
+
+};
 
 void solve()
 {
@@ -98,15 +206,19 @@ void solve()
     int q; cin >> q;
     SD sd;
     sd.build(a);
+    //SegmentTree tree(n, 0);
+    //tree.build(a);
     while (q--) {
         int type; cin >> type;
         if (type == 1) {
             int l, r, x; cin >> l >> r >> x; --l; --r;
             cout << (sd.get(l, r, x) ? "YES\n" : "NO\n");
+            //cout << (tree.get(l, r, x) ? "YES\n" : "NO\n");
         }
         else if (type == 2) {
             int i, v; cin >> i >> v; --i;
             sd.update(i, v);
+            //tree.update(i, v);
         }
     }
 }

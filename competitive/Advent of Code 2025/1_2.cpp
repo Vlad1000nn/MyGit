@@ -7,10 +7,9 @@ using namespace std;
 constexpr int mod = 100;
 
 int calc_zeros(int l, int r) { 
-    if (l > r) std::swap(l, r);
     
-    int x = std::ceil(l / 100.0);  // Первое число % mod == 0 
-    int y = std::floor(r / 100.0); // Последнее число % mod == 0 
+    int x = ceil(l / 100.0);  // Первое число % mod == 0 
+    int y = floor(r / 100.0); // Последнее число % mod == 0 
     
     return (x > y ? 0 : y - x + 1);
 }

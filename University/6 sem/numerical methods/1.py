@@ -37,8 +37,6 @@ def gaussian_func(matr):
     if not len(A):
         return []
 
-    ans = np.asarray([[0]] * len(A))
-
     print('START MATRIX')
     custom_print(A)
 
